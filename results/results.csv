@@ -6,11 +6,11 @@ run_id,issue,round,variant,from_stage,s1_requirements,s2_design,s3_implementatio
 45421944976,4,1,main,requirements,pass,pass,pass,pass,pass,approve,none,1,14,passed,,13,success,0,997795,29875,1.491,6.2,https://github.com/AlooKaLaddoo/markdown/actions/runs/45421944976
 45421953103,5,1,main,requirements,pass,pass,pass,pass,pass,request_changes,implementation,1,9,passed,,14,success,2,454041,29443,1.068,6.3,https://github.com/AlooKaLaddoo/markdown/actions/runs/45421953103
 45421961357,3,1,main,requirements,pass,pass,pass,fail,-,-,-,1,13,failed,stage 4: the tester could not produce acceptance tests for every criterion,,,0,702954,26171,1.144,4.7,https://github.com/AlooKaLaddoo/markdown/actions/runs/45421961357
-45423178755,5,2,main,implementation,reused,reused,pass,pass,pass,approve,none,1,0,passed,,14,success,0,351052,9323,0.456,3.7,https://github.com/AlooKaLaddoo/markdown/actions/runs/45423178755
-45423758931,2,2,main,implementation,reused,reused,pass,pass,pass,inconclusive,none,1,0,passed,,15,success,0,0,0,0.343,14.4,https://github.com/AlooKaLaddoo/markdown/actions/runs/45423758931
+45423178755,5,2,main,implementation,reused,reused,pass,pass,pass,approve,none,1,0,passed,,14,success,0,351052,9323,0.455,3.7,https://github.com/AlooKaLaddoo/markdown/actions/runs/45423178755
+45423758931,2,2,main,implementation,reused,reused,pass,pass,pass,inconclusive,none,1,0,passed,,15,success,0,347418,4797,0.343,14.4,https://github.com/AlooKaLaddoo/markdown/actions/runs/45423758931
 45423975316,3,1,main,requirements,pass,pass,pass,pass,pass,approve,none,1,13,passed,,11,success,0,625064,28736,1.258,6.8,https://github.com/AlooKaLaddoo/markdown/actions/runs/45423975316
 45424111273,1,1,e2_implementer_writes_tests,requirements,pass,pass,pass,pass,pass,approve,none,1,8,passed,,16,success,0,473066,18832,0.812,5.2,https://github.com/AlooKaLaddoo/markdown/actions/runs/45424111273
-45424118844,2,1,e2_implementer_writes_tests,requirements,pass,pass,pass,pass,pass,approve,none,1,10,passed,,18,success,0,742594,21214,0.966,6.5,https://github.com/AlooKaLaddoo/markdown/actions/runs/45424118844
+45424118844,2,1,e2_implementer_writes_tests,requirements,pass,pass,pass,pass,pass,approve,none,1,10,passed,,18,success,0,742594,21214,0.965,6.5,https://github.com/AlooKaLaddoo/markdown/actions/runs/45424118844
 45424124851,3,1,e2_implementer_writes_tests,requirements,pass,pass,pass,pass,pass,approve,none,1,11,passed,,17,success,0,382582,18734,0.791,4.8,https://github.com/AlooKaLaddoo/markdown/actions/runs/45424124851
 45424130661,4,1,e2_implementer_writes_tests,requirements,pass,pass,pass,pass,pass,approve,none,1,11,passed,,19,success,0,803842,28054,1.236,6.3,https://github.com/AlooKaLaddoo/markdown/actions/runs/45424130661
 45424136585,5,1,e2_implementer_writes_tests,requirements,pass,pass,pass,pass,pass,inconclusive,none,1,11,passed,,20,success,0,524230,27592,1.033,6.6,https://github.com/AlooKaLaddoo/markdown/actions/runs/45424136585

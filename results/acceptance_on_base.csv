@@ -1,0 +1,11 @@
+pr,issue,variant,acceptance_tests,fail_on_base,base_result
+12,1,main,10,6,FAILED (errors=6)
+15,2,main,13,6,FAILED (errors=6)
+11,3,main,13,10,FAILED (failures=10)
+13,4,main,14,13,FAILED (errors=13)
+14,5,main,13,4,FAILED (failures=4)
+16,1,e2,8,6,FAILED (errors=6)
+18,2,e2,10,6,FAILED (errors=6)
+17,3,e2,11,9,FAILED (failures=9)
+19,4,e2,11,10,FAILED (errors=10)
+20,5,e2,12,6,FAILED (failures=6)

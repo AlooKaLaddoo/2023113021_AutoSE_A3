@@ -10,6 +10,8 @@ Roll number 2023113021. Report: [`report.pdf`](report.pdf) (source [`report.md`]
 - **Workflow:** [`.github/workflows/autose.yml`](https://github.com/AlooKaLaddoo/markdown/blob/master/.github/workflows/autose.yml).
   The agent code is in [`.github/autose/`](https://github.com/AlooKaLaddoo/markdown/tree/master/.github/autose).
   A copy of both is in [`workflow/`](workflow/).
+  The copy includes [PR #21](https://github.com/AlooKaLaddoo/markdown/pull/21) (result-event parsing and credential-free
+  checks), a fix made after all runs had finished while we checked the results. No run used it.
 - **Protected `master`:** Python-Markdown's default branch is `master` (the brief's `main`). It needs a pull request and the `tests` CI check, also for admins, and allows no force pushes. The workflow never merges.
   *Timeline:* protection (PR + `tests` check, no force pushes) was switched on at setup, but **admin enforcement was off
   while the workflow was being debugged**. Our own fix commits `0799449`, `79cd0cc`, `3eb36e4`, `6b5f4a3` and
@@ -28,7 +30,7 @@ Roll number 2023113021. Report: [`report.pdf`](report.pdf) (source [`report.md`]
 All agents run as headless Claude Code (`claude -p`, CLI 2.1.331) on a **Claude Team subscription**. The token
 comes from `claude setup-token` and is stored as the repository secret `CLAUDE_CODE_OAUTH_TOKEN`. There is no
 per-token API bill, so the spending limit is the plan's usage limit (ADR-006). Token counts are reported from the
-CLI's usage output (`results/results.csv`). **Total over all 26 runs: 8.90 M input tokens (mostly cache reads) and 0.35 M output tokens; $0 billed (API-list equivalent $15.67).**
+CLI's usage output (`results/results.csv`). **Total over all 26 runs: 9.25 M input tokens (mostly cache reads) and 0.36 M output tokens, counted from every result event in the transcripts; $0 billed (API-list equivalent $15.67).**
 
 | Role | Stages | Model |
 |---|---|---|
@@ -60,7 +62,7 @@ README.md                  this file
 report.pdf / report.md     the report
 architecture/
   views/                   component view, sequence view (real run), stage map
-  decisions/               ADR-001 ... ADR-0xx (Nygard format; superseded ones kept)
+  decisions/               ADR-001 ... ADR-012 (Nygard format; superseded ones kept)
 workflow/                  copy of .github/workflows/ and .github/autose/ (agent code, prompts, A1 skill)
 experiment/
   issues/                  the 5 issue texts (with our notes: type, upstream source)

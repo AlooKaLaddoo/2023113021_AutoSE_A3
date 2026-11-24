@@ -13,8 +13,8 @@ flowchart TB
     end
 
     subgraph WF["autose.yml"]
-        GATE["gate job<br/>who / what / which mode<br/>perms: issues:read"]
-        BUILD["build job<br/>stages 1-4<br/>perms: contents:read, issues:read"]
+        GATE["gate job<br/>who / what / which mode<br/>perms: none"]
+        BUILD["build job<br/>stages 1-4<br/>perms: contents:read, issues:read, actions:read"]
         REL["release job<br/>stage 5 (no LLM)<br/>perms: contents:write, pull-requests:write, actions:write"]
         REV["review job<br/>stage 6<br/>perms: contents:read, issues:read, pull-requests:read"]
         ROUTE["route job<br/>post review, decide loop-back<br/>perms: pull-requests:write, issues:write, actions:write"]
@@ -26,8 +26,8 @@ flowchart TB
 
     subgraph AGENTS["Agents (claude -p, CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1)"]
         AN["Analyst - Opus 5.5<br/>tools: Read, Grep, Glob<br/>stages 1 + 2<br/>(A1 skill + ARCHITECTURE.md)"]
-        IM["Implementer - Opus 5.5<br/>tools: Read, Grep, Glob, Edit, Write,<br/>Bash(python -m unittest / compileall)<br/>stage 3"]
-        TE["Tester - Opus 5.5<br/>tools: Read, Grep, Glob, Edit, Write,<br/>Bash(python -m unittest)<br/>stage 4, clean checkout, spec only"]
+        IM["Implementer - Opus 5.5<br/>tools: Read, Grep, Glob, Edit, Write,<br/>Bash(python -m unittest / compileall / python -c)<br/>stage 3"]
+        TE["Tester - Opus 5.5<br/>tools: Read, Grep, Glob, Edit, Write,<br/>Bash(python -m unittest / python -c)<br/>stage 4, clean checkout, spec only"]
         RV["Reviewer - Sonnet 5.5<br/>tools: Read, Grep, Glob, Write,<br/>Bash(python / git diff)<br/>stage 6, structured verdict"]
         JU["Spec judge - Haiku 5.5<br/>no tools<br/>testability check"]
     end
@@ -52,12 +52,12 @@ flowchart TB
 
 | Component | Model | Tools / permissions | Can push? | Sees |
 |---|---|---|---|---|
-| gate job | none | `issues: read` | no | event payload |
+| gate job | none | none (`permissions: {}`) | no | event payload |
 | Analyst (stages 1, 2) | `claude-opus-5-5` | Read, Grep, Glob | no | issue (as untrusted data), repo, `ARCHITECTURE.md`, A1 skill; on loop-back: `review.md` or failing test summary |
 | Spec judge | `claude-haiku-5-5` | none | no | acceptance criteria only |
-| Implementer (stage 3) | `claude-opus-5-5` | Read, Grep, Glob, Edit, Write, `Bash(python -m unittest:*)`, `Bash(python -m compileall:*)` | no | `spec.md`, `design.md`, repo; on retry: failing test output; on loop-back: `review.md` |
-| Tester (stage 4) | `claude-opus-5-5` | Read, Grep, Glob, Edit, Write, `Bash(python -m unittest:*)` | no | `spec.md` and a clean checkout of the base commit only |
-| orchestrator + checks | none | runs tests, compiles, parses artifacts | no | everything (it is code) |
+| Implementer (stage 3) | `claude-opus-5-5` | Read, Grep, Glob, Edit, Write, `Bash(python -m unittest:*)`, `Bash(python -m compileall:*)`, `Bash(python -c:*)` | no | `spec.md`, `design.md`, repo; on retry: failing test output; on loop-back: `review.md` |
+| Tester (stage 4) | `claude-opus-5-5` | Read, Grep, Glob, Edit, Write, `Bash(python -m unittest:*)`, `Bash(python -c:*)` | no | `spec.md` and a clean checkout of the base commit only |
+| orchestrator + checks | none | runs tests, compiles, parses artifacts; runs agent-written code outside the sandbox, without credentials since PR #21 | no | everything (it is code) |
 | release job | none | `contents: write`, `pull-requests: write`, `actions: write` | yes (only `autose/*` branches) | artifacts from build |
 | Reviewer (stage 6) | `claude-sonnet-5-5` | Read, Grep, Glob, Write, `Bash(python:*)`, `Bash(git diff:*)` | no (no token, `persist-credentials: false`) | issue, diff, repo at PR head commit |
 | route job | none | `pull-requests: write`, `issues: write`, `actions: write` | no | `verdict.json` |
