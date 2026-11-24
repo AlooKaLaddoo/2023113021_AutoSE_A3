@@ -2,7 +2,7 @@
 
 AutoSE (CS6.403), Assignment 3, IIIT Hyderabad, Monsoon 2026. Roll number 2023113021. Fork: [AlooKaLaddoo/markdown](https://github.com/AlooKaLaddoo/markdown) (Python-Markdown pinned at `3f2c551`). Submission: [AlooKaLaddoo/2023113021_AutoSE_A3](https://github.com/AlooKaLaddoo/2023113021_AutoSE_A3).
 
-A maintainer labels an issue `autose` (or comments `/autose`). A GitHub Actions workflow then runs the six fixed stages: four Claude Code agents in three roles, plus deterministic code. It ends with a pull request and an independent review posted on it. A person decides whether to merge. The design rests on one idea, carried through every decision: **agents propose, code decides**. Every pass/fail decision, every loop-back and every GitHub action is taken by ordinary code. Agents only produce artifacts, and none of them ever holds a GitHub credential.
+A maintainer labels an issue `autose` (or comments `/autose`). A GitHub Actions workflow then runs the six fixed stages: four agent roles (Analyst, Implementer, Tester, Reviewer, all Claude Code sessions) plus a small Haiku judge inside the stage 1 check, and deterministic code for everything else. It ends with a pull request and an independent review posted on it. A person decides whether to merge. The design rests on one idea, carried through every decision: **agents propose, code decides**. Every pass/fail decision, every loop-back and every GitHub action is taken by ordinary code. Agents only produce artifacts, and none of them ever holds a GitHub credential. Inside the build job, failing tests send work from the Tester back to the Implementer (2 attempts per design, then back to design once).
 
 ## 1. Architecture
 
@@ -10,20 +10,20 @@ A maintainer labels an issue `autose` (or comments `/autose`). A GitHub Actions 
 
 ```mermaid
 flowchart TB
-    I["Issue: label 'autose'<br/>or '/autose'"] --> G["gate job<br/>no token"]
+    I["Issue: label 'autose' or '/autose'"] --> G["gate job (no token): who, what, which mode"]
     G --> B
-    subgraph B["build job: contents:read (orchestrator.py state machine)"]
+    subgraph B["build job · contents:read · orchestrator.py state machine · agents hold no GitHub token"]
         direction LR
-        A1["Analyst · Opus 5.5<br/>Read/Grep/Glob<br/>stage 1 spec.md (A1 skill)"] --> J["Judge · Haiku 5.5<br/>no tools"]
-        J --> A2["Analyst · Opus 5.5<br/>stage 2 design.md (ARCHITECTURE.md)"]
-        A2 --> IM["Implementer · Opus 5.5<br/>Edit/Write/Bash(unittest) in sandbox<br/>stage 3 diff.patch"]
-        IM --> T["Tester · Opus 5.5<br/>clean base checkout, spec only<br/>stage 4 tests"]
-        T -->|suite fails| IM
+        A1["Analyst · Opus 5.5<br/>Read/Grep/Glob<br/>1 spec.md (A1 skill)"] --> J["Judge · Haiku 5.5<br/>testable?"]
+        J --> A2["Analyst · Opus 5.5<br/>2 design.md<br/>(ARCHITECTURE.md)"]
+        A2 --> IM["Implementer · Opus 5.5<br/>Edit/Write/Bash, sandboxed<br/>3 diff.patch"]
+        IM --> T["Tester · Opus 5.5<br/>spec only, clean base<br/>4 tests + full suite"]
     end
-    B --> R["release job: contents/PR/actions write<br/>no LLM: push branch, gh pr create,<br/>dispatch ci.yml, wait"]
-    R --> V["review job: contents:read<br/>Reviewer · Sonnet 5.5<br/>issue + diff + repo at PR head"]
-    V --> RT["route job: PR/issues/actions write<br/>validate verdict, post review,<br/>state comment, next round"]
-    RT -->|"request_changes, rounds left:<br/>gh workflow run (from design / implementation)"| G
+    B --> R["release job, no LLM: push branch, gh pr create, run ci.yml · 5 pr.md"]
+    R --> V["review job, read-only: Reviewer · Sonnet 5.5 sees issue + diff + repo · 6 review.md"]
+    V --> RT["route job: validate verdict, post review, state comment"]
+    RT --> H["Human: merge or close"]
+    RT -. "changes requested, rounds left" .-> NX["next round: gh workflow run autose.yml<br/>(new run, from design or implementation, max 2)"]
 ```
 
 All agents are headless Claude Code sessions (`claude -p`, CLI 2.1.331) launched by `orchestrator.py`. Per role they get `--tools` (which tools exist), `--allowedTools` (pre-approved commands), `--permission-mode dontAsk`, `--model`, `--max-turns`, `--max-budget-usd`, no MCP servers, only user-level settings, `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, and Claude Code's bubblewrap sandbox for every shell command (no network). GitHub is reached only through the `gh` CLI, and only in deterministic steps whose job holds the matching `GITHUB_TOKEN` scope.
@@ -140,7 +140,7 @@ All five issues were run once more with `e2_implementer_writes_tests`. There is 
 | 2 Design | 12 | 12 first try | every file/symbol found by `ast` |
 | 3 Implementation (build) | 15 | 15 first try | one "pass" was false: the implementer hit the plan limit and the old code passed (§4.3) |
 | 4 Testing | 15 | 13 | both failures were orchestrator bugs (test-file handling), fixed |
-| 5 Release (PR open + CI) | 13 | 13 | CI dispatched explicitly, 22-24 s |
+| 5 Release (PR open + CI) | 13 | 13 | CI dispatched explicitly by the release job (22-24 s). The PR-triggered `ci` runs on bot PRs waited for maintainer approval (`github-actions[bot]` counts as a first-time contributor). We approved them afterwards, and all 10 PRs show `tests` passing |
 | 6 Review | 13 PR reviews + 11 seeded | 8 approve, 3 request_changes, 2 inconclusive | inconclusive = plan's 5-hour limit hit during the review |
 
 ### 4.2 Hidden tests and PRs

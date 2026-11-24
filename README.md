@@ -11,6 +11,17 @@ Roll number 2023113021. Report: [`report.pdf`](report.pdf) (source [`report.md`]
   The agent code is in [`.github/autose/`](https://github.com/AlooKaLaddoo/markdown/tree/master/.github/autose).
   A copy of both is in [`workflow/`](workflow/).
 - **Protected `master`:** Python-Markdown's default branch is `master` (the brief's `main`). It needs a pull request and the `tests` CI check, also for admins, and allows no force pushes. The workflow never merges.
+  *Timeline:* protection (PR + `tests` check, no force pushes) was switched on at setup, but **admin enforcement was off
+  while the workflow was being debugged**. Our own fix commits `0799449`, `79cd0cc`, `3eb36e4`, `6b5f4a3` and
+  `dc99bf1` were therefore pushed by the repository owner directly to `master`. Each one's message names the run that
+  exposed the bug. Admin enforcement was switched on after the last run, so since then nobody, admins included, can
+  push to `master` directly.
+- **Where the CI proof is.** The release job dispatches `ci.yml` on the PR branch (pushes made with `GITHUB_TOKEN` do
+  not trigger workflows) and waits for it. That run is linked in each run's `release.json` and in the PR description's
+  stage 5 check. GitHub treats `github-actions[bot]` as a first-time contributor (approval policy
+  `first_time_contributors`), so the PR-triggered `ci` runs on bot PRs wait for a maintainer's approval. We approved
+  them after the experiment, and every autose PR (#11-#20) now shows the `tests` check passing on its head commit.
+  Approving the waiting run is therefore a small manual step for a maintainer after every bot PR.
 
 ## Models
 
