@@ -28,7 +28,7 @@ flowchart TB
         AN["Analyst - Opus 5.5<br/>tools: Read, Grep, Glob<br/>stages 1 + 2<br/>(A1 skill + ARCHITECTURE.md)"]
         IM["Implementer - Opus 5.5<br/>tools: Read, Grep, Glob, Edit, Write,<br/>Bash(python -m unittest / compileall)<br/>stage 3"]
         TE["Tester - Opus 5.5<br/>tools: Read, Grep, Glob, Edit, Write,<br/>Bash(python -m unittest)<br/>stage 4, clean checkout, spec only"]
-        RV["Reviewer - Sonnet 5.5<br/>tools: Read, Grep, Glob, Write,<br/>Bash(python / git diff / git log)<br/>stage 6, structured verdict"]
+        RV["Reviewer - Sonnet 5.5<br/>tools: Read, Grep, Glob, Write,<br/>Bash(python / git diff)<br/>stage 6, structured verdict"]
         JU["Spec judge - Haiku 5.5<br/>no tools<br/>testability check"]
     end
 
@@ -59,6 +59,6 @@ flowchart TB
 | Tester (stage 4) | `claude-opus-5-5` | Read, Grep, Glob, Edit, Write, `Bash(python -m unittest:*)` | no | `spec.md` and a clean checkout of the base commit only |
 | orchestrator + checks | none | runs tests, compiles, parses artifacts | no | everything (it is code) |
 | release job | none | `contents: write`, `pull-requests: write`, `actions: write` | yes (only `autose/*` branches) | artifacts from build |
-| Reviewer (stage 6) | `claude-sonnet-5-5` | Read, Grep, Glob, Write, `Bash(python:*)`, `Bash(git diff:*)`, `Bash(git log:*)`, `Bash(git show:*)` | no (no token, `persist-credentials: false`) | issue, diff, repo at PR head commit |
+| Reviewer (stage 6) | `claude-sonnet-5-5` | Read, Grep, Glob, Write, `Bash(python:*)`, `Bash(git diff:*)` | no (no token, `persist-credentials: false`) | issue, diff, repo at PR head commit |
 | route job | none | `pull-requests: write`, `issues: write`, `actions: write` | no | `verdict.json` |
 | human maintainer | - | merge button | yes | everything |

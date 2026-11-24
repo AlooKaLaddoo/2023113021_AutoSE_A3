@@ -10,7 +10,7 @@ Roll number 2023113021. Report: [`report.pdf`](report.pdf) (source [`report.md`]
 - **Workflow:** [`.github/workflows/autose.yml`](https://github.com/AlooKaLaddoo/markdown/blob/master/.github/workflows/autose.yml).
   The agent code is in [`.github/autose/`](https://github.com/AlooKaLaddoo/markdown/tree/master/.github/autose).
   A copy of both is in [`workflow/`](workflow/).
-- **Protected `master`:** changes need a pull request and the `tests` CI check. The workflow never merges.
+- **Protected `master`:** Python-Markdown's default branch is `master` (the brief's `main`). It needs a pull request and the `tests` CI check, also for admins, and allows no force pushes. The workflow never merges.
 
 ## Models
 

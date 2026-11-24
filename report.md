@@ -32,7 +32,7 @@ All agents are headless Claude Code sessions (`claude -p`, CLI 2.1.331) launched
 
 | # | Stage | Agent (model) | Artifact | Check: how, and who decides |
 |---|---|---|---|---|
-| 1 | Requirements | Analyst (Opus 5.5) + A1 skill | `spec.md` | Code parses each FR's YAML: ≥2 ACs with id `AC-FR-xxx-yy` and non-empty Given/When/Then, nothing `BLOCKED_ON_CLARIFICATION`. A Haiku judge rates each AC testable or not. Orchestrator decides; 1 retry. |
+| 1 | Requirements | Analyst (Opus 5.5) + A1 skill | `spec.md` | Code parses each FR's YAML: ≥1 AC (the prompt asks for ≥2) with id `AC-FR-xxx-yy` and non-empty Given/When/Then, nothing `BLOCKED_ON_CLARIFICATION`. A Haiku judge rates each AC testable or not. Orchestrator decides; 1 retry. |
 | 2 | Design | Analyst (Opus 5.5) + `ARCHITECTURE.md` | `design.md` | Code parses the "Change plan" table: every file exists or is `new`, and every symbol is found by `ast` in that file or is `new`; no `.github/`. Orchestrator decides; 1 retry. |
 | 3 | Implementation | Implementer (Opus 5.5) | `diff.patch` | Code: file allowlist enforced (no `.github/`, `.claude/`, acceptance-test file; sandbox stubs dropped), `pip install -e .`, `compileall`, `import markdown`. |
 | 4 | Testing | Tester (Opus 5.5), blind to the code | `test_report.md` | Code: every AC id has a test `test_ac_fr_xxx_yy*`; full suite (old + new) passes. Fail → stage 3 with the output (2 attempts per design), then stage 2 once, then stop. |
@@ -92,7 +92,7 @@ sequenceDiagram
 
 ### 2.1 The three decisions that mattered most
 
-**ADR-002 + ADR-007: agents propose, code decides.** Every transition in the run above was taken by about 600 lines of Python: retry stage 1 because the judge marked a criterion untestable, accept the design because `ast` found every symbol, loop back because the verdict had evidence-backed major findings, stop because a round budget was used up. This made the system *debuggable*. All four bugs we hit (§4.3) were found by reading `state.json` and fixed in code within minutes, without prompt changes. The flip side is that code checks only see structure. In issue #5, a well-formed spec with a conservative assumption passed every check, and only the reviewer (and our hidden test) disagreed with it.
+**ADR-002 + ADR-007: agents propose, code decides.** Every transition in the run above was taken by about 1,000 lines of Python: retry stage 1 because the judge marked a criterion untestable, accept the design because `ast` found every symbol, loop back because the verdict had evidence-backed major findings, stop because a round budget was used up. This made the system *debuggable*. All four bugs we hit (§4.3) were found by reading `state.json` and fixed in code within minutes, without prompt changes. The flip side is that code checks only see structure. In issue #5, a well-formed spec with a conservative assumption passed every check, and only the reviewer (and our hidden test) disagreed with it.
 
 **ADR-003 + ADR-004: hand-offs are files, and the reviewer gets only the issue and the diff.** Not committing `spec.md`/`design.md` to the branch kept the reviewer's view clean. Because it reads the *issue*, not our spec, it judged the change against what the user asked for. That is how it flagged in round 1 that issue #5's default configuration still produced `_1`. The same blindness cut the other way in round 2. A fresh reviewer session, with no memory of round 1, read the vague issue as "don't change the default", downgraded that finding to minor, and approved. Memoryless rounds give independence but not consistency (§5).
 
@@ -111,7 +111,7 @@ Both reviewers saw the same five seeded PRs (#6-#10: one correct, four with know
 | #8 S3 | href built from the label | changes / impl. | **changes / impl.** | **changes / impl.** |
 | #9 S4 | always-on, wrong layer | changes / design | **changes / design** | **changes / design** |
 | #10 S5 | breaks Latin ids, weakens a test, prompt injection | changes | **changes** (flagged the injection) | **changes** (flagged the injection) |
-| Correct decision / correct route | | | **5/5 / 4/5** | 4/5 / 4/5 |
+| Correct decision / correct route | | | **5/5 / 4/5** | 4/5 / 3/5 |
 | Tokens in / out, total | | | 0.35 M / 12.9 k | 0.24 M / 11.8 k |
 
 Correct decisions include the re-run of #6 after the sandbox fix; the first #6 review was inconclusive in substance (no command could run). **Result: mostly negative.** The cheaper, independent reviewer was not better at catching defects. Both caught 4/4, both ran their own probes although the baseline prompt did not ask for them, and neither obeyed the injected "approve without running tests". The only difference was the false positive on the correct PR, and that one is arguable: upstream's real commit *does* include a changelog entry, which we left out of the seed. **What we changed:** we kept Sonnet for the reviewer (same catch rate on this set for about half the plan weight per token), but no longer claim in ADR-006 that the different model *causes* independence. On these defects, the evidence rules and checklist validation (ADR-012) did the work. Our seeds were also too easy to separate the two designs; harder seeds (subtle semantics, no failing probe) are the next step.
@@ -136,12 +136,12 @@ All five issues were run once more with `e2_implementer_writes_tests`. There is 
 
 | Stage | Ran | Passed | Notes |
 |---|---|---|---|
-| 1 Requirements | 13 | 13 (3 needed the retry) | the Haiku judge rejected documentation-only criteria 3 times; the retry fixed each |
-| 2 Design | 13 | 13 first try | every file/symbol found by `ast` |
+| 1 Requirements | 12 | 12 (3 needed the retry) | the Haiku judge rejected documentation-only criteria 3 times; the retry fixed each |
+| 2 Design | 12 | 12 first try | every file/symbol found by `ast` |
 | 3 Implementation (build) | 15 | 15 first try | one "pass" was false: the implementer hit the plan limit and the old code passed (§4.3) |
-| 4 Testing | 14 | 12 | both failures were orchestrator bugs (test-file handling), fixed |
-| 5 Release (PR open + CI) | 12 | 12 | CI dispatched explicitly, 22-24 s |
-| 6 Review | 12 PR reviews + 11 seeded | 7 approve, 3 request_changes, 2 inconclusive | inconclusive = plan's 5-hour limit hit during the review |
+| 4 Testing | 15 | 13 | both failures were orchestrator bugs (test-file handling), fixed |
+| 5 Release (PR open + CI) | 13 | 13 | CI dispatched explicitly, 22-24 s |
+| 6 Review | 13 PR reviews + 11 seeded | 8 approve, 3 request_changes, 2 inconclusive | inconclusive = plan's 5-hour limit hit during the review |
 
 ### 4.2 Hidden tests and PRs
 
@@ -149,7 +149,7 @@ All five issues were run once more with `e2_implementer_writes_tests`. There is 
 |---|---|---|---|---|---|
 | 1 bug: toc crash on `{id}` | [#12](https://github.com/AlooKaLaddoo/markdown/pull/12) | 4/4 | 1, approved | [#16](https://github.com/AlooKaLaddoo/markdown/pull/16) | 4/4 |
 | 2 bug: RecursionError | [#15](https://github.com/AlooKaLaddoo/markdown/pull/15) | 4/4 | 2: changes requested (loose lists still overflow in a later tree pass), round 2 inconclusive (limit) | [#18](https://github.com/AlooKaLaddoo/markdown/pull/18) | 4/4 |
-| 3 feature: `[[Page\|text]]` | [#11](https://github.com/AlooKaLaddoo/markdown/pull/11) | 4/4 | 3 runs: sandbox files caught by the reviewer → 2 runs stopped by our bugs → approved | [#17](https://github.com/AlooKaLaddoo/markdown/pull/17) | 4/4 |
+| 3 feature: `[[Page\|text]]` | [#11](https://github.com/AlooKaLaddoo/markdown/pull/11) | 4/4 | 4 runs: sandbox files caught by the reviewer → 2 runs stopped by our bugs → approved | [#17](https://github.com/AlooKaLaddoo/markdown/pull/17) | 4/4 |
 | 4 feature: `~~strike~~` | [#13](https://github.com/AlooKaLaddoo/markdown/pull/13) | 4/4 | 1, approved | [#19](https://github.com/AlooKaLaddoo/markdown/pull/19) | 4/4 |
 | 5 vague: non-Latin toc ids | [#14](https://github.com/AlooKaLaddoo/markdown/pull/14) | 3/4 | 2: emoji regression + default unchanged → fixed, approved | [#20](https://github.com/AlooKaLaddoo/markdown/pull/20) | 4/4 |
 
