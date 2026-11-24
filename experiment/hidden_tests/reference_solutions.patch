@@ -1,0 +1,150 @@
+diff --git c/markdown/blockprocessors.py i/markdown/blockprocessors.py
+index 728bf8f..ff2bb68 100644
+--- c/markdown/blockprocessors.py
++++ i/markdown/blockprocessors.py
+@@ -172,8 +172,12 @@ class ListIndentProcessor(BlockProcessor):
+         self.INDENT_RE = re.compile(r'^(([ ]{%s})+)' % self.tab_length)
+ 
+     def test(self, parent: etree.Element, block: str) -> bool:
++        # A list calls `parseBlocks` once per level of nesting, so the
++        # nesting has to stop short of the interpreter's limit. The markers which no
++        # longer nest are kept as text, as they are for a blockquote.
+         return block.startswith(' '*self.tab_length) and \
+             not self.parser.state.isstate('detabbed') and \
++            not util.nearing_recursion_limit() and \
+             (parent.tag in self.ITEM_TYPES or
+                 (len(parent) and parent[-1] is not None and
+                     (parent[-1].tag in self.LIST_TYPES)))
+@@ -354,7 +358,9 @@ class OListProcessor(BlockProcessor):
+                                     (self.tab_length, self.tab_length * 2 - 1))
+ 
+     def test(self, parent: etree.Element, block: str) -> bool:
+-        return bool(self.RE.match(block))
++        # As in `ListIndentProcessor`, nesting stops short of the recursion limit.
++        # `UListProcessor` inherits this method, so unordered lists are covered too.
++        return bool(self.RE.match(block)) and not util.nearing_recursion_limit()
+ 
+     def run(self, parent: etree.Element, blocks: list[str]) -> None:
+         # Check for multiple items in one block.
+@@ -417,7 +423,10 @@ class OListProcessor(BlockProcessor):
+ 
+     def get_items(self, block: str) -> list[str]:
+         """ Break a block into list items. """
+-        items = []
++        # The lines of an item are collected in a list and joined once at the end.
++        # Appending per line, as in `item = '{}\n{}'.format(item, line)`, copies the
++        # whole item every time, which is quadratic in the number of lines of an item.
++        items: list[list[str]] = []
+         for line in block.split('\n'):
+             m = self.CHILD_RE.match(line)
+             if m:
+@@ -428,18 +437,18 @@ class OListProcessor(BlockProcessor):
+                     INTEGER_RE = re.compile(r'(\d+)')
+                     self.STARTSWITH = INTEGER_RE.match(m.group(1)).group()
+                 # Append to the list
+-                items.append(m.group(3))
++                items.append([m.group(3)])
+             elif self.INDENT_RE.match(line):
+                 # This is an indented (possibly nested) item.
+-                if items[-1].startswith(' '*self.tab_length):
++                if items[-1][0].startswith(' '*self.tab_length):
+                     # Previous item was indented. Append to that item.
+-                    items[-1] = '{}\n{}'.format(items[-1], line)
++                    items[-1].append(line)
+                 else:
+-                    items.append(line)
++                    items.append([line])
+             else:
+                 # This is another line of previous item. Append to that item.
+-                items[-1] = '{}\n{}'.format(items[-1], line)
+-        return items
++                items[-1].append(line)
++        return ['\n'.join(item) for item in items]
+ 
+ 
+ class UListProcessor(OListProcessor):
+diff --git c/markdown/extensions/strikethrough.py i/markdown/extensions/strikethrough.py
+new file mode 100644
+index 0000000..943c21b
+--- /dev/null
++++ i/markdown/extensions/strikethrough.py
+@@ -0,0 +1,12 @@
++"""Reference solution for issue 4 (used only to validate the hidden tests)."""
++from . import Extension
++from ..inlinepatterns import SimpleTagInlineProcessor
++
++
++class StrikethroughExtension(Extension):
++    def extendMarkdown(self, md):
++        md.inlinePatterns.register(SimpleTagInlineProcessor(r'(~{2})(?!~)(.+?)(?<!~)~{2}', 'del'), 'strikethrough', 55)
++
++
++def makeExtension(**kwargs):  # pragma: no cover
++    return StrikethroughExtension(**kwargs)
+diff --git c/markdown/extensions/toc.py i/markdown/extensions/toc.py
+index ba65225..48ea366 100644
+--- c/markdown/extensions/toc.py
++++ i/markdown/extensions/toc.py
+@@ -38,10 +38,13 @@ if TYPE_CHECKING:  # pragma: no cover
+ 
+ def slugify(value: str, separator: str, unicode: bool = False) -> str:
+     """ Slugify a string, to make it URL friendly. """
++    original = value
+     if not unicode:
+         # Replace Extended Latin characters with ASCII, i.e. `žlutý` => `zluty`
+         value = unicodedata.normalize('NFKD', value)
+         value = value.encode('ascii', 'ignore').decode('ascii')
++        if not re.sub(r'[^\w]', '', value) and re.sub(r'[^\w]', '', original):
++            value = original
+     value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+     return re.sub(r'[{}\s]+'.format(separator), separator, value)
+ 
+@@ -400,7 +403,10 @@ class TocTreeprocessor(Treeprocessor):
+                 name = strip_tags(innerhtml)
+ 
+                 # Do not override pre-existing ids
+-                if "id" not in el.attrib:
++                if not el.attrib.get("id"):
++                    # The `attr_list` extension writes bare attributes with a
++                    # value of None. A valueless id is no id at all, so a slug
++                    # is generated for it like for any other id-less heading.
+                     el.attrib["id"] = unique(self.slugify(html.unescape(name), self.sep), used_ids, id_counters)
+ 
+                 data_toc_label = ''
+diff --git c/markdown/extensions/wikilinks.py i/markdown/extensions/wikilinks.py
+index 70d0ea5..0ff0419 100644
+--- c/markdown/extensions/wikilinks.py
++++ i/markdown/extensions/wikilinks.py
+@@ -59,7 +59,7 @@ class WikiLinkExtension(Extension):
+         self.md = md
+ 
+         # append to end of inline patterns
+-        WIKILINK_RE = r'\[\[([\w0-9_ -]+)\]\]'
++        WIKILINK_RE = r'\[\[([\w0-9_ -]+)(?:\|([^\]|]*))?\]\]'
+         wikilinkPattern = WikiLinksInlineProcessor(WIKILINK_RE, self.getConfigs())
+         wikilinkPattern.md = md
+         md.inlinePatterns.register(wikilinkPattern, 'wikilink', 75)
+@@ -75,8 +75,9 @@ class WikiLinksInlineProcessor(InlineProcessor):
+     def handleMatch(self, m: re.Match[str], data: str) -> tuple[etree.Element | str, int, int]:
+         if m.group(1).strip():
+             base_url, end_url, html_class = self._getMeta()
+-            label = m.group(1).strip()
+-            url = self.config['build_url'](label, base_url, end_url)
++            target = m.group(1).strip()
++            label = (m.group(2) or '').strip() or target
++            url = self.config['build_url'](target, base_url, end_url)
+             a = etree.Element('a')
+             a.text = label
+             a.set('href', url)
+diff --git c/pyproject.toml i/pyproject.toml
+index 5464a00..e0835f4 100644
+--- c/pyproject.toml
++++ i/pyproject.toml
+@@ -84,6 +84,7 @@ meta = 'markdown.extensions.meta:MetaExtension'
+ nl2br = 'markdown.extensions.nl2br:Nl2BrExtension'
+ sane_lists = 'markdown.extensions.sane_lists:SaneListExtension'
+ smarty = 'markdown.extensions.smarty:SmartyExtension'
++strikethrough = 'markdown.extensions.strikethrough:StrikethroughExtension'
+ tables = 'markdown.extensions.tables:TableExtension'
+ toc = 'markdown.extensions.toc:TocExtension'
+ wikilinks = 'markdown.extensions.wikilinks:WikiLinkExtension'
