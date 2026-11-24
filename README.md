@@ -11,7 +11,8 @@ Roll number 2023113021. Report: [`report.pdf`](report.pdf) (source [`report.md`]
   The agent code is in [`.github/autose/`](https://github.com/AlooKaLaddoo/markdown/tree/master/.github/autose).
   A copy of both is in [`workflow/`](workflow/).
   The copy includes [PR #21](https://github.com/AlooKaLaddoo/markdown/pull/21) (result-event parsing and credential-free
-  checks), a fix made after all runs had finished while we checked the results. No run used it.
+  checks), a fix made after all runs had finished while we checked the results, merged by the maintainer as `78539fb`.
+  No run used it. The only PR ever merged in the fork is this human-reviewed infrastructure fix; the workflow merged nothing.
 - **Protected `master`:** Python-Markdown's default branch is `master` (the brief's `main`). It needs a pull request and the `tests` CI check, also for admins, and allows no force pushes. The workflow never merges.
   *Timeline:* protection (PR + `tests` check, no force pushes) was switched on at setup, but **admin enforcement was off
   while the workflow was being debugged**. Our own fix commits `0799449`, `79cd0cc`, `3eb36e4`, `6b5f4a3` and
