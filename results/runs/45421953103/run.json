@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T15:08:09Z",
+  "databaseId": 45421953103,
+  "displayTitle": "TOC is kind of useless for non-English docs",
+  "event": "issues",
+  "status": "completed",
+  "updatedAt": "2026-11-24T15:14:29Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45421953103",
+  "jobs": {
+    "gate": "success",
+    "build": "success",
+    "release": "success",
+    "review": "success",
+    "route": "success"
+  }
+}

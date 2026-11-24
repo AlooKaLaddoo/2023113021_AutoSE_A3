@@ -1,0 +1,232 @@
+{
+  "issue": 5,
+  "round": 1,
+  "from_stage": "requirements",
+  "variant": "main",
+  "base_sha": "79cd0cc61cf2c650f8c3627001ffa37b14bd1b50",
+  "start_sha": "79cd0cc61cf2c650f8c3627001ffa37b14bd1b50",
+  "status": "passed",
+  "stages": {
+    "requirements": {
+      "ok": true,
+      "attempts": 2,
+      "problems": [],
+      "acceptance_criteria": [
+        "AC-FR-001-01",
+        "AC-FR-001-02",
+        "AC-FR-001-03",
+        "AC-FR-001-04",
+        "AC-FR-001-05",
+        "AC-FR-002-01",
+        "AC-FR-002-02",
+        "AC-FR-002-03",
+        "AC-FR-002-04"
+      ]
+    },
+    "design": {
+      "ok": true,
+      "attempts": 1,
+      "problems": [],
+      "files": [
+        "markdown/extensions/toc.py",
+        "markdown/extensions/toc.py",
+        "tests/test_syntax/extensions/test_toc.py",
+        "docs/extensions/toc.md",
+        "docs/changelog.md"
+      ]
+    },
+    "implementation": {
+      "ok": true,
+      "attempts": 1,
+      "problems": [],
+      "files": [
+        "docs/changelog.md",
+        "docs/extensions/toc.md",
+        "markdown/extensions/toc.py",
+        "tests/test_syntax/extensions/test_toc.py"
+      ]
+    },
+    "testing": {
+      "ok": true,
+      "attempts": 1,
+      "suite": "OK (skipped=52)"
+    }
+  },
+  "agents": [
+    {
+      "stage": "requirements",
+      "role": "analyst",
+      "ok": true,
+      "error": "",
+      "turns": 7,
+      "seconds": 62.5,
+      "cost_usd_nominal": 0.2012,
+      "input_tokens": 60349,
+      "output_tokens": 7002,
+      "transcript": "1-requirements-a1.jsonl"
+    },
+    {
+      "stage": "requirements-judge",
+      "role": "judge",
+      "ok": true,
+      "error": "",
+      "turns": 2,
+      "seconds": 5.2,
+      "cost_usd_nominal": 0.0011,
+      "input_tokens": 6372,
+      "output_tokens": 1072,
+      "transcript": "1-judge-a1.jsonl"
+    },
+    {
+      "stage": "requirements",
+      "role": "analyst",
+      "ok": true,
+      "error": "",
+      "turns": 5,
+      "seconds": 51.1,
+      "cost_usd_nominal": 0.1602,
+      "input_tokens": 43134,
+      "output_tokens": 5705,
+      "transcript": "1-requirements-a2.jsonl"
+    },
+    {
+      "stage": "requirements-judge",
+      "role": "judge",
+      "ok": true,
+      "error": "",
+      "turns": 2,
+      "seconds": 4.2,
+      "cost_usd_nominal": 0.001,
+      "input_tokens": 6458,
+      "output_tokens": 874,
+      "transcript": "1-judge-a2.jsonl"
+    },
+    {
+      "stage": "design",
+      "role": "analyst",
+      "ok": true,
+      "error": "",
+      "turns": 6,
+      "seconds": 34.9,
+      "cost_usd_nominal": 0.2057,
+      "input_tokens": 49818,
+      "output_tokens": 4098,
+      "transcript": "2-design-a1.jsonl"
+    },
+    {
+      "stage": "implementation",
+      "role": "implementer",
+      "ok": true,
+      "error": "",
+      "turns": 11,
+      "seconds": 29.2,
+      "cost_usd_nominal": 0.2335,
+      "input_tokens": 110876,
+      "output_tokens": 3599,
+      "transcript": "3-implementation-a1.jsonl"
+    },
+    {
+      "stage": "testing",
+      "role": "tester",
+      "ok": true,
+      "error": "",
+      "turns": 5,
+      "seconds": 25.8,
+      "cost_usd_nominal": 0.1759,
+      "input_tokens": 86263,
+      "output_tokens": 3346,
+      "transcript": "4-tests-a1.jsonl"
+    }
+  ],
+  "history": [
+    {
+      "t": "15:08:41",
+      "stage": "setup",
+      "event": "baseline suite",
+      "detail": "OK (skipped=52)"
+    },
+    {
+      "t": "15:09:43",
+      "stage": "requirements",
+      "event": "agent analyst ok",
+      "detail": "7 turns, 63s "
+    },
+    {
+      "t": "15:09:49",
+      "stage": "requirements-judge",
+      "event": "agent judge ok",
+      "detail": "2 turns, 5s "
+    },
+    {
+      "t": "15:09:49",
+      "stage": "requirements",
+      "event": "check failed",
+      "detail": "- AC-FR-002-03 is not testable: It is a documentation review, and the required content ('states', 'shows an example with a non-Latin heading and its resulting id') is not pinned to concrete text or values, so a unit test cannot give an unambiguous pass/fail result."
+    },
+    {
+      "t": "15:10:40",
+      "stage": "requirements",
+      "event": "agent analyst ok",
+      "detail": "5 turns, 51s "
+    },
+    {
+      "t": "15:10:44",
+      "stage": "requirements-judge",
+      "event": "agent judge ok",
+      "detail": "2 turns, 4s "
+    },
+    {
+      "t": "15:10:44",
+      "stage": "requirements",
+      "event": "check passed",
+      "detail": "9 acceptance criteria"
+    },
+    {
+      "t": "15:11:19",
+      "stage": "design",
+      "event": "agent analyst ok",
+      "detail": "6 turns, 35s "
+    },
+    {
+      "t": "15:11:19",
+      "stage": "design",
+      "event": "check passed",
+      "detail": "markdown/extensions/toc.py, markdown/extensions/toc.py, tests/test_syntax/extensions/test_toc.py, docs/extensions/toc.md, docs/changelog.md"
+    },
+    {
+      "t": "15:11:48",
+      "stage": "implementation",
+      "event": "agent implementer ok",
+      "detail": "11 turns, 29s "
+    },
+    {
+      "t": "15:11:50",
+      "stage": "implementation",
+      "event": "build check passed",
+      "detail": "docs/changelog.md, docs/extensions/toc.md, markdown/extensions/toc.py, tests/test_syntax/extensions/test_toc.py"
+    },
+    {
+      "t": "15:12:16",
+      "stage": "testing",
+      "event": "agent tester ok",
+      "detail": "5 turns, 26s "
+    },
+    {
+      "t": "15:12:16",
+      "stage": "testing",
+      "event": "new tests on base commit",
+      "detail": "FAILED (failures=4)"
+    },
+    {
+      "t": "15:12:18",
+      "stage": "run",
+      "event": "passed",
+      "detail": ""
+    }
+  ],
+  "baseline": {
+    "status": "OK (skipped=52)",
+    "ran": 1166
+  },
+  "reason": ""
+}

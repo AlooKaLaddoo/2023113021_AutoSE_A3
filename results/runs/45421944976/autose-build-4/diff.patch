@@ -1,0 +1,477 @@
+diff --git a/docs/changelog.md b/docs/changelog.md
+index cba971a..bb6bacf 100644
+--- a/docs/changelog.md
++++ b/docs/changelog.md
+@@ -14,6 +14,11 @@ See the [Contributing Guide](contributing.md) for details.
+ 
+ ## [Unreleased]
+ 
++### Added
++
++* Add a new built-in `strikethrough` extension which renders GitHub-style
++  `~~text~~` as `<del>text</del>`.
++
+ ### Fixed
+ 
+ * Support automatic links with URL schemes other than HTTP and FTP, such as
+diff --git a/docs/extensions/index.md b/docs/extensions/index.md
+index 1798023..d777f68 100644
+--- a/docs/extensions/index.md
++++ b/docs/extensions/index.md
+@@ -56,6 +56,7 @@ Extension                          | Entry Point    | Dot Notation
+ [New Line to Break]                | `nl2br`        | `markdown.extensions.nl2br`
+ [Sane Lists]                       | `sane_lists`   | `markdown.extensions.sane_lists`
+ [SmartyPants]                      | `smarty`       | `markdown.extensions.smarty`
++[Strikethrough]                    | `strikethrough` | `markdown.extensions.strikethrough`
+ [Table of Contents]                | `toc`          | `markdown.extensions.toc`
+ [WikiLinks]                        | `wikilinks`    | `markdown.extensions.wikilinks`
+ 
+@@ -75,6 +76,7 @@ Extension                          | Entry Point    | Dot Notation
+ [Markdown in HTML]: md_in_html.md
+ [Sane Lists]: sane_lists.md
+ [SmartyPants]: smarty.md
++[Strikethrough]: strikethrough.md
+ [Table of Contents]: toc.md
+ [WikiLinks]: wikilinks.md
+ 
+diff --git a/docs/extensions/strikethrough.md b/docs/extensions/strikethrough.md
+new file mode 100644
+index 0000000..c9e5f0a
+--- /dev/null
++++ b/docs/extensions/strikethrough.md
+@@ -0,0 +1,52 @@
++---
++title: Strikethrough Extension
++---
++
++# Strikethrough
++
++## Summary
++
++The Strikethrough extension adds GitHub-style syntax for struck-out text.
++Text wrapped in a pair of double tildes is rendered as a `<del>` element.
++
++## Syntax
++
++```md
++This is ~~withdrawn~~ text.
++```
++
++becomes:
++
++```html
++<p>This is <del>withdrawn</del> text.</p>
++```
++
++Other inline markup (strong, emphasis, links, etc.) inside the struck text
++works as usual, and strikethrough can itself be nested inside emphasis.
++
++The following rules apply:
++
++* Only a run of exactly two tildes is a delimiter. A single `~` and runs of
++  three or more tildes (such as `~~~foo~~~`) are left as literal text.
++* The opening `~~` must not be followed by whitespace, and the closing `~~`
++  must not be preceded by whitespace. So `a ~~ b ~~ c` is left as is.
++  Intraword use, such as `a~~b~~c`, is allowed.
++* An unclosed `~~` is left as literal text.
++* Tildes inside code spans and fenced code blocks are not affected.
++
++When the extension is enabled, a tilde can be escaped with a backslash (`\~`)
++to prevent it from being treated as a delimiter. For example,
++`\~\~foo\~\~` renders as `~~foo~~`.
++
++## Usage
++
++See [Extensions](index.md) for general extension usage. Use `strikethrough` as
++the name of the extension.
++
++This extension does not accept any special configuration options.
++
++A trivial example:
++
++```python
++markdown.markdown(some_text, extensions=['strikethrough'])
++```
+diff --git a/docs/reference/markdown.extensions.strikethrough.md b/docs/reference/markdown.extensions.strikethrough.md
+new file mode 100644
+index 0000000..caed97e
+--- /dev/null
++++ b/docs/reference/markdown.extensions.strikethrough.md
+@@ -0,0 +1,3 @@
++::: markdown.extensions.strikethrough
++    options:
++      inherited_members: false
+diff --git a/markdown/extensions/strikethrough.py b/markdown/extensions/strikethrough.py
+new file mode 100644
+index 0000000..4601c49
+--- /dev/null
++++ b/markdown/extensions/strikethrough.py
+@@ -0,0 +1,47 @@
++# Strikethrough Extension for Python-Markdown
++# ===========================================
++
++# This extension adds GitHub-style `~~strikethrough~~` syntax.
++
++# Copyright 2026 The Python Markdown Project
++
++# License: [BSD](https://opensource.org/licenses/bsd-license.php)
++
++"""
++This extension renders text wrapped in a pair of double tildes (`~~text~~`)
++as a `<del>` element, as GitHub does.
++
++See the [documentation](https://Python-Markdown.github.io/extensions/strikethrough)
++for details.
++"""
++
++from __future__ import annotations
++
++from . import Extension
++from ..inlinepatterns import SimpleTagInlineProcessor
++
++STRIKE_RE = r'(?<!~)(~~)(?![\s~])(.+?)(?<![\s~])~~(?!~)'
++""" Match `~~text~~`: exactly two tildes, not flanked by whitespace on the inside. """
++
++
++class StrikethroughExtension(Extension):
++    """ Add strikethrough to Markdown. """
++
++    def extendMarkdown(self, md):
++        """ Register the processor and make `~` escapable.
++
++        | Class Instance                                                                   | Registry                                                         | Name            | Priority |
++        | -------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------- | :------: |
++        | [`SimpleTagInlineProcessor`][markdown.inlinepatterns.SimpleTagInlineProcessor] | [`inlinepatterns`][markdown.inlinepatterns.build_inlinepatterns] | `strikethrough` | `65`     |
++
++        """
++        # flake8: noqa: E501 33-35
++
++        md.inlinePatterns.register(SimpleTagInlineProcessor(STRIKE_RE, 'del'), 'strikethrough', 65)
++        if '~' not in md.ESCAPED_CHARS:
++            md.ESCAPED_CHARS.append('~')
++
++
++def makeExtension(**kwargs):  # pragma: no cover
++    """ Return an instance of the `StrikethroughExtension` """
++    return StrikethroughExtension(**kwargs)
+diff --git a/mkdocs.yml b/mkdocs.yml
+index 4b34e14..3fc91b1 100644
+--- a/mkdocs.yml
++++ b/mkdocs.yml
+@@ -81,6 +81,7 @@ nav:
+       - Markdown in HTML: extensions/md_in_html.md
+       - Sane Lists: extensions/sane_lists.md
+       - SmartyPants: extensions/smarty.md
++      - Strikethrough: extensions/strikethrough.md
+       - Table of Contents: extensions/toc.md
+       - Tables: extensions/tables.md
+       - WikiLinks: extensions/wikilinks.md
+@@ -116,6 +117,7 @@ nav:
+       - <code>markdown.&#8203;extensions.&#8203;nl2br</code>: reference/markdown.extensions.nl2br.md
+       - <code>markdown.&#8203;extensions.&#8203;sane_lists</code>: reference/markdown.extensions.sane_lists.md
+       - <code>markdown.&#8203;extensions.&#8203;smarty</code>: reference/markdown.extensions.smarty.md
++      - <code>markdown.&#8203;extensions.&#8203;strikethrough</code>: reference/markdown.extensions.strikethrough.md
+       - <code>markdown.&#8203;extensions.&#8203;tables</code>: reference/markdown.extensions.tables.md
+       - <code>markdown.&#8203;extensions.&#8203;toc</code>: reference/markdown.extensions.toc.md
+       - <code>markdown.&#8203;extensions.&#8203;wikilinks</code>: reference/markdown.extensions.wikilinks.md
+diff --git a/pyproject.toml b/pyproject.toml
+index 5464a00..e0835f4 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -84,6 +84,7 @@ meta = 'markdown.extensions.meta:MetaExtension'
+ nl2br = 'markdown.extensions.nl2br:Nl2BrExtension'
+ sane_lists = 'markdown.extensions.sane_lists:SaneListExtension'
+ smarty = 'markdown.extensions.smarty:SmartyExtension'
++strikethrough = 'markdown.extensions.strikethrough:StrikethroughExtension'
+ tables = 'markdown.extensions.tables:TableExtension'
+ toc = 'markdown.extensions.toc:TocExtension'
+ wikilinks = 'markdown.extensions.wikilinks:WikiLinkExtension'
+diff --git a/tests/test_autose_issue_4.py b/tests/test_autose_issue_4.py
+new file mode 100644
+index 0000000..6c5a888
+--- /dev/null
++++ b/tests/test_autose_issue_4.py
+@@ -0,0 +1,103 @@
++"""
++Acceptance tests for issue #4: GitHub-style ~~strikethrough~~ extension.
++"""
++
++import markdown
++from markdown.test_tools import TestCase
++
++
++class TestStrikethroughLoading(TestCase):
++
++    def test_ac_fr_001_01_load_by_short_name(self):
++        self.assertEqual(
++            markdown.markdown('~~foo~~', extensions=['strikethrough']),
++            '<p><del>foo</del></p>'
++        )
++
++    def test_ac_fr_001_02_load_by_dotted_path(self):
++        self.assertEqual(
++            markdown.markdown('~~foo~~', extensions=['markdown.extensions.strikethrough']),
++            '<p><del>foo</del></p>'
++        )
++
++    def test_ac_fr_001_03_unchanged_without_extension(self):
++        self.assertEqual(
++            markdown.markdown('~~foo~~ and *bar*'),
++            '<p>~~foo~~ and <em>bar</em></p>'
++        )
++
++    def test_ac_fr_001_04_fenced_code_alongside(self):
++        self.assertEqual(
++            markdown.markdown('~~~\n~~foo~~\n~~~', extensions=['strikethrough', 'fenced_code']),
++            '<pre><code>~~foo~~\n</code></pre>'
++        )
++
++
++class TestStrikethroughRendering(TestCase):
++
++    default_kwargs = {'extensions': ['strikethrough']}
++
++    def test_ac_fr_002_01_plain_in_sentence(self):
++        self.assertMarkdownRenders(
++            'This is ~~withdrawn~~ text.',
++            '<p>This is <del>withdrawn</del> text.</p>'
++        )
++
++    def test_ac_fr_002_02_nested_inline_markup(self):
++        self.assertMarkdownRenders(
++            '~~**bold** *em* [link](http://example.com)~~',
++            '<p><del><strong>bold</strong> <em>em</em> <a href="http://example.com">link</a></del></p>'
++        )
++
++    def test_ac_fr_002_03_inside_emphasis(self):
++        self.assertMarkdownRenders(
++            '*a ~~b~~ c*',
++            '<p><em>a <del>b</del> c</em></p>'
++        )
++
++    def test_ac_fr_002_04_multiple_spans(self):
++        self.assertMarkdownRenders(
++            '~~one~~ and ~~two~~',
++            '<p><del>one</del> and <del>two</del></p>'
++        )
++
++    def test_ac_fr_002_05_code_span_unaffected(self):
++        self.assertMarkdownRenders(
++            '`~~code~~`',
++            '<p><code>~~code~~</code></p>'
++        )
++
++
++class TestStrikethroughLiteralTildes(TestCase):
++
++    default_kwargs = {'extensions': ['strikethrough']}
++
++    def test_ac_fr_003_01_single_tildes_literal(self):
++        self.assertMarkdownRenders(
++            'about ~5 minutes, ~foo~',
++            '<p>about ~5 minutes, ~foo~</p>'
++        )
++
++    def test_ac_fr_003_02_unclosed_double_tilde(self):
++        self.assertMarkdownRenders(
++            'an ~~unclosed span',
++            '<p>an ~~unclosed span</p>'
++        )
++
++    def test_ac_fr_003_03_whitespace_flanked_delimiters(self):
++        self.assertMarkdownRenders(
++            'a ~~ b ~~ c',
++            '<p>a ~~ b ~~ c</p>'
++        )
++
++    def test_ac_fr_003_04_three_tildes_not_delimiter(self):
++        self.assertMarkdownRenders(
++            '~~~foo~~~',
++            '<p>~~~foo~~~</p>'
++        )
++
++    def test_ac_fr_003_05_escaped_tildes_literal(self):
++        self.assertMarkdownRenders(
++            '\\~\\~foo\\~\\~',
++            '<p>~~foo~~</p>'
++        )
+diff --git a/tests/test_syntax/extensions/test_strikethrough.py b/tests/test_syntax/extensions/test_strikethrough.py
+new file mode 100644
+index 0000000..8fffc2c
+--- /dev/null
++++ b/tests/test_syntax/extensions/test_strikethrough.py
+@@ -0,0 +1,174 @@
++"""
++Python Markdown
++
++A Python implementation of John Gruber's Markdown.
++
++Documentation: https://python-markdown.github.io/
++GitHub: https://github.com/Python-Markdown/markdown/
++PyPI: https://pypi.org/project/Markdown/
++
++Started by Manfred Stienstra (http://www.dwerg.net/).
++Maintained for a few years by Yuri Takhteyev (http://www.freewisdom.org).
++Currently maintained by Waylan Limberg (https://github.com/waylan),
++Dmitry Shachnev (https://github.com/mitya57) and Isaac Muse (https://github.com/facelessuser).
++
++Copyright 2007-2023 The Python Markdown Project (v. 1.7 and later)
++Copyright 2004, 2005, 2006 Yuri Takhteyev (v. 0.2-1.6b)
++Copyright 2004 Manfred Stienstra (the original version)
++
++License: BSD (see LICENSE.md for details).
++"""
++
++import os
++
++import markdown
++from markdown.test_tools import TestCase
++from markdown.util import get_installed_extensions
++from markdown.extensions.strikethrough import StrikethroughExtension
++
++
++class TestStrikethrough(TestCase):
++
++    default_kwargs = {'extensions': [StrikethroughExtension()]}
++
++    def test_entry_point_declared(self):
++        # AC-FR-001-01: the short name is provided by this entry point (ADR-2).
++        path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'pyproject.toml')
++        with open(path, encoding='utf-8') as f:
++            content = f.read()
++        self.assertIn(
++            "strikethrough = 'markdown.extensions.strikethrough:StrikethroughExtension'",
++            content
++        )
++
++    def test_short_name(self):
++        # AC-FR-001-01
++        if not any(ep.name == 'strikethrough' for ep in get_installed_extensions()):
++            self.skipTest('Package metadata must be reinstalled to register the entry point.')
++        self.assertEqual(
++            markdown.markdown('~~foo~~', extensions=['strikethrough']),
++            '<p><del>foo</del></p>'
++        )
++
++    def test_dotted_path(self):
++        # AC-FR-001-02
++        self.assertEqual(
++            markdown.markdown('~~foo~~', extensions=['markdown.extensions.strikethrough']),
++            '<p><del>foo</del></p>'
++        )
++
++    def test_disabled_by_default(self):
++        # AC-FR-001-03
++        self.assertEqual(
++            markdown.markdown('~~foo~~ and *bar*'),
++            '<p>~~foo~~ and <em>bar</em></p>'
++        )
++        self.assertNotIn('~', markdown.Markdown().ESCAPED_CHARS)
++
++    def test_escaped_chars_per_instance(self):
++        md = markdown.Markdown(extensions=[StrikethroughExtension()])
++        self.assertIn('~', md.ESCAPED_CHARS)
++        self.assertEqual(md.ESCAPED_CHARS.count('~'), 1)
++        self.assertNotIn('~', markdown.Markdown().ESCAPED_CHARS)
++
++    def test_fenced_code(self):
++        # AC-FR-001-04
++        self.assertMarkdownRenders(
++            '~~~\n~~foo~~\n~~~',
++            '<pre><code>~~foo~~\n</code></pre>',
++            extensions=[StrikethroughExtension(), 'fenced_code']
++        )
++
++    def test_in_sentence(self):
++        # AC-FR-002-01
++        self.assertMarkdownRenders(
++            'This is ~~withdrawn~~ text.',
++            '<p>This is <del>withdrawn</del> text.</p>'
++        )
++
++    def test_nested_inline(self):
++        # AC-FR-002-02
++        self.assertMarkdownRenders(
++            '~~**bold** *em* [link](http://example.com)~~',
++            '<p><del><strong>bold</strong> <em>em</em> <a href="http://example.com">link</a></del></p>'
++        )
++
++    def test_inside_emphasis(self):
++        # AC-FR-002-03
++        self.assertMarkdownRenders(
++            '*a ~~b~~ c*',
++            '<p><em>a <del>b</del> c</em></p>'
++        )
++
++    def test_inside_strong(self):
++        self.assertMarkdownRenders(
++            '**a ~~b~~ c**',
++            '<p><strong>a <del>b</del> c</strong></p>'
++        )
++
++    def test_multiple_spans(self):
++        # AC-FR-002-04
++        self.assertMarkdownRenders(
++            '~~one~~ and ~~two~~',
++            '<p><del>one</del> and <del>two</del></p>'
++        )
++
++    def test_code_span(self):
++        # AC-FR-002-05
++        self.assertMarkdownRenders(
++            '`~~code~~`',
++            '<p><code>~~code~~</code></p>'
++        )
++
++    def test_single_tilde(self):
++        # AC-FR-003-01
++        self.assertMarkdownRenders(
++            'about ~5 minutes, ~foo~',
++            '<p>about ~5 minutes, ~foo~</p>'
++        )
++
++    def test_unclosed(self):
++        # AC-FR-003-02
++        self.assertMarkdownRenders(
++            'an ~~unclosed span',
++            '<p>an ~~unclosed span</p>'
++        )
++
++    def test_whitespace_flanked(self):
++        # AC-FR-003-03
++        self.assertMarkdownRenders(
++            'a ~~ b ~~ c',
++            '<p>a ~~ b ~~ c</p>'
++        )
++
++    def test_three_tildes(self):
++        # AC-FR-003-04
++        self.assertMarkdownRenders(
++            '~~~foo~~~',
++            '<p>~~~foo~~~</p>'
++        )
++
++    def test_escaped(self):
++        # AC-FR-003-05
++        self.assertMarkdownRenders(
++            '\\~\\~foo\\~\\~',
++            '<p>~~foo~~</p>'
++        )
++
++    def test_intraword(self):
++        self.assertMarkdownRenders(
++            'a~~b~~c',
++            '<p>a<del>b</del>c</p>'
++        )
++
++    def test_multiline(self):
++        self.assertMarkdownRenders(
++            '~~foo\nbar~~',
++            '<p><del>foo\nbar</del></p>'
++        )
++
++    def test_emphasis_unchanged(self):
++        self.assertMarkdownRenders(
++            '***a** b* _c_ __d__',
++            '<p><em><strong>a</strong> b</em> <em>c</em> <strong>d</strong></p>'
++        )

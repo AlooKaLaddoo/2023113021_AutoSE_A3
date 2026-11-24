@@ -1,0 +1,198 @@
+{
+  "issue": 3,
+  "round": 1,
+  "from_stage": "requirements",
+  "variant": "main",
+  "base_sha": "3eb36e474072e21bec262b0d676192bbad7d4060",
+  "start_sha": "c251b62517a5562809d660c3338973f1ada88a4c",
+  "status": "passed",
+  "stages": {
+    "requirements": {
+      "ok": true,
+      "attempts": 1,
+      "problems": [],
+      "acceptance_criteria": [
+        "AC-FR-001-01",
+        "AC-FR-001-02",
+        "AC-FR-001-03",
+        "AC-FR-001-04",
+        "AC-FR-001-05",
+        "AC-FR-001-06",
+        "AC-FR-001-07",
+        "AC-FR-001-08",
+        "AC-FR-002-01",
+        "AC-FR-002-02",
+        "AC-FR-002-03",
+        "AC-FR-002-04",
+        "AC-FR-002-05"
+      ]
+    },
+    "design": {
+      "ok": true,
+      "attempts": 1,
+      "problems": [],
+      "files": [
+        "markdown/extensions/wikilinks.py",
+        "markdown/extensions/wikilinks.py",
+        "markdown/extensions/wikilinks.py",
+        "tests/test_extensions.py",
+        "tests/test_extensions.py",
+        "tests/test_extensions.py"
+      ]
+    },
+    "implementation": {
+      "ok": true,
+      "attempts": 1,
+      "problems": [],
+      "files": [
+        ".github/autose/checks.py",
+        ".github/autose/orchestrator.py",
+        "docs/changelog.md",
+        "docs/extensions/wikilinks.md",
+        "markdown/extensions/wikilinks.py",
+        "tests/test_autose_issue_3.py",
+        "tests/test_extensions.py"
+      ]
+    },
+    "testing": {
+      "ok": true,
+      "attempts": 1,
+      "suite": "OK (skipped=52)"
+    }
+  },
+  "agents": [
+    {
+      "stage": "requirements",
+      "role": "analyst",
+      "ok": true,
+      "error": "",
+      "turns": 7,
+      "seconds": 53.4,
+      "cost_usd_nominal": 0.203,
+      "input_tokens": 64655,
+      "output_tokens": 6518,
+      "transcript": "1-requirements-a1.jsonl"
+    },
+    {
+      "stage": "requirements-judge",
+      "role": "judge",
+      "ok": true,
+      "error": "",
+      "turns": 2,
+      "seconds": 6.0,
+      "cost_usd_nominal": 0.0013,
+      "input_tokens": 6804,
+      "output_tokens": 1268,
+      "transcript": "1-judge-a1.jsonl"
+    },
+    {
+      "stage": "design",
+      "role": "analyst",
+      "ok": true,
+      "error": "",
+      "turns": 8,
+      "seconds": 80.2,
+      "cost_usd_nominal": 0.3647,
+      "input_tokens": 128937,
+      "output_tokens": 7890,
+      "transcript": "2-design-a1.jsonl"
+    },
+    {
+      "stage": "implementation",
+      "role": "implementer",
+      "ok": true,
+      "error": "",
+      "turns": 17,
+      "seconds": 58.4,
+      "cost_usd_nominal": 0.3937,
+      "input_tokens": 299110,
+      "output_tokens": 6498,
+      "transcript": "3-implementation-a1.jsonl"
+    },
+    {
+      "stage": "testing",
+      "role": "tester",
+      "ok": true,
+      "error": "",
+      "turns": 4,
+      "seconds": 26.0,
+      "cost_usd_nominal": 0.1857,
+      "input_tokens": 56536,
+      "output_tokens": 3297,
+      "transcript": "4-tests-a1.jsonl"
+    }
+  ],
+  "history": [
+    {
+      "t": "15:19:32",
+      "stage": "setup",
+      "event": "baseline suite",
+      "detail": "OK (skipped=52)"
+    },
+    {
+      "t": "15:20:26",
+      "stage": "requirements",
+      "event": "agent analyst ok",
+      "detail": "7 turns, 53s "
+    },
+    {
+      "t": "15:20:32",
+      "stage": "requirements-judge",
+      "event": "agent judge ok",
+      "detail": "2 turns, 6s "
+    },
+    {
+      "t": "15:20:32",
+      "stage": "requirements",
+      "event": "check passed",
+      "detail": "13 acceptance criteria"
+    },
+    {
+      "t": "15:21:52",
+      "stage": "design",
+      "event": "agent analyst ok",
+      "detail": "8 turns, 80s "
+    },
+    {
+      "t": "15:21:52",
+      "stage": "design",
+      "event": "check passed",
+      "detail": "markdown/extensions/wikilinks.py, markdown/extensions/wikilinks.py, markdown/extensions/wikilinks.py, tests/test_extensions.py, tests/test_extensions.py, tests/test_extensions.py"
+    },
+    {
+      "t": "15:22:50",
+      "stage": "implementation",
+      "event": "agent implementer ok",
+      "detail": "17 turns, 58s "
+    },
+    {
+      "t": "15:22:53",
+      "stage": "implementation",
+      "event": "build check passed",
+      "detail": ".github/autose/checks.py, .github/autose/orchestrator.py, docs/changelog.md, docs/extensions/wikilinks.md, markdown/extensions/wikilinks.py, tests/test_autose_issue_3.py, tests/test_extensions.py"
+    },
+    {
+      "t": "15:23:19",
+      "stage": "testing",
+      "event": "agent tester ok",
+      "detail": "4 turns, 26s "
+    },
+    {
+      "t": "15:23:19",
+      "stage": "testing",
+      "event": "new tests on base commit",
+      "detail": "FAILED (failures=10)"
+    },
+    {
+      "t": "15:23:20",
+      "stage": "run",
+      "event": "passed",
+      "detail": ""
+    }
+  ],
+  "baseline": {
+    "status": "OK (skipped=52)",
+    "ran": 1166
+  },
+  "reason": ""
+}

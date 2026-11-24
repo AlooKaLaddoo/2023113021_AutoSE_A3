@@ -1,0 +1,65 @@
+diff --git a/markdown/extensions/strikethrough.py b/markdown/extensions/strikethrough.py
+new file mode 100644
+index 0000000..75fdae0
+--- /dev/null
++++ b/markdown/extensions/strikethrough.py
+@@ -0,0 +1,16 @@
++"""
++Strikethrough extension: `~~text~~` renders as `<del>text</del>`.
++
++The pattern itself is part of the core inline patterns (see `build_inlinepatterns`), so this
++extension only exists so that `extensions=['strikethrough']` keeps working for users who ask for it.
++"""
++from . import Extension
++
++
++class StrikethroughExtension(Extension):
++    def extendMarkdown(self, md):
++        pass
++
++
++def makeExtension(**kwargs):  # pragma: no cover
++    return StrikethroughExtension(**kwargs)
+diff --git a/markdown/inlinepatterns.py b/markdown/inlinepatterns.py
+index 6f42bbf..9caf872 100644
+--- a/markdown/inlinepatterns.py
++++ b/markdown/inlinepatterns.py
+@@ -92,6 +92,9 @@ def build_inlinepatterns(md: Markdown, **kwargs: Any) -> util.Registry[InlinePro
+     inlinePatterns.register(HtmlInlineProcessor(ENTITY_RE, md), 'entity', 80)
+     inlinePatterns.register(DelimiterProcessor('*', 'strong,em', md), 'em_strong', 60)
+     md.delimiters.add('_', 'strong,em', smart=True)
++    # GitHub-style ~~strikethrough~~
++    inlinePatterns.register(SimpleTagInlineProcessor(r'(~{2})(.+?)~{2}', 'del'), 'strikethrough', 55)
++
+     return inlinePatterns
+ 
+ 
+diff --git a/pyproject.toml b/pyproject.toml
+index 5464a00..e0835f4 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -84,6 +84,7 @@ meta = 'markdown.extensions.meta:MetaExtension'
+ nl2br = 'markdown.extensions.nl2br:Nl2BrExtension'
+ sane_lists = 'markdown.extensions.sane_lists:SaneListExtension'
+ smarty = 'markdown.extensions.smarty:SmartyExtension'
++strikethrough = 'markdown.extensions.strikethrough:StrikethroughExtension'
+ tables = 'markdown.extensions.tables:TableExtension'
+ toc = 'markdown.extensions.toc:TocExtension'
+ wikilinks = 'markdown.extensions.wikilinks:WikiLinkExtension'
+diff --git a/tests/test_syntax/extensions/test_strikethrough.py b/tests/test_syntax/extensions/test_strikethrough.py
+new file mode 100644
+index 0000000..fc5a57f
+--- /dev/null
++++ b/tests/test_syntax/extensions/test_strikethrough.py
+@@ -0,0 +1,11 @@
++from markdown.test_tools import TestCase
++
++
++class TestStrikethrough(TestCase):
++    default_kwargs = {'extensions': ['strikethrough']}
++
++    def test_basic(self):
++        self.assertMarkdownRenders('~~gone~~ text', '<p><del>gone</del> text</p>')
++
++    def test_with_bold(self):
++        self.assertMarkdownRenders('~~**b**~~', '<p><del><strong>b</strong></del></p>')

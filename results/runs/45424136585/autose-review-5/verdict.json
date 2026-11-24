@@ -1,0 +1,22 @@
+{
+  "reviewer": null,
+  "decision": {
+    "final": "inconclusive",
+    "route": "none",
+    "why": "reviewer returned no valid verdict"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": false,
+    "error": "agent stopped: success You've hit your 5-hour limit \u00b7 resets 7pm (UTC)",
+    "turns": 3,
+    "seconds": 13.5,
+    "cost_usd_nominal": 0.0479,
+    "input_tokens": 33029,
+    "output_tokens": 1038,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "e2_implementer_writes_tests",
+  "head_sha": "1dab3afa857fb60ca066aa8f7829a1010b6779de"
+}

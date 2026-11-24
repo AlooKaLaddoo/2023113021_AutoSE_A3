@@ -1,0 +1,228 @@
+diff --git a/docs/changelog.md b/docs/changelog.md
+index cba971a..cc668f7 100644
+--- a/docs/changelog.md
++++ b/docs/changelog.md
+@@ -39,6 +39,11 @@ See the [Contributing Guide](contributing.md) for details.
+   provided, rather than rendering them as `key="key"`, so the same source
+   renders consistently under both the `html` and `xhtml` output formats
+   (#1501).
++* The default `slugify` function of the `toc` extension now falls back to a
++  Unicode slug when the ASCII slug would be empty, so headings written entirely
++  in non-Latin scripts (e.g. Cyrillic or Devanagari) get readable ids instead
++  of `_1`, `_2`, etc. Unicode slugs also keep combining marks (such as
++  Devanagari vowel signs), so words are no longer altered.
+ 
+ ## [3.11.2] - 2026-10-19
+ 
+diff --git a/docs/extensions/toc.md b/docs/extensions/toc.md
+index f9d5800..9f5ca43 100644
+--- a/docs/extensions/toc.md
++++ b/docs/extensions/toc.md
+@@ -217,7 +217,10 @@ The following options are provided to configure the output:
+     The callable must return a string appropriate for use in HTML `id` attributes.
+ 
+     An alternate version of the default callable supporting Unicode strings is also
+-    provided as `markdown.extensions.toc.slugify_unicode`.
++    provided as `markdown.extensions.toc.slugify_unicode`. The default callable
++    produces ASCII-only ids, but if a heading contains no ASCII word characters
++    (for example, a heading written entirely in Cyrillic or Devanagari), it falls
++    back to the Unicode slug, so such headings still get readable ids.
+ 
+ * **`separator`**:
+     Word separator. Character which replaces white space in id. Defaults to "`-`".
+diff --git a/markdown/extensions/toc.py b/markdown/extensions/toc.py
+index ba65225..2071074 100644
+--- a/markdown/extensions/toc.py
++++ b/markdown/extensions/toc.py
+@@ -37,13 +37,28 @@ if TYPE_CHECKING:  # pragma: no cover
+ 
+ 
+ def slugify(value: str, separator: str, unicode: bool = False) -> str:
+-    """ Slugify a string, to make it URL friendly. """
++    """ Slugify a string, to make it URL friendly.
++
++    With `unicode=False`, the result is ASCII only. If the ASCII slug would be empty (for example,
++    for a heading written entirely in a non-Latin script), the Unicode slug is returned instead.
++    Unicode slugs keep combining marks (categories `Mn` and `Mc`), such as Devanagari vowel signs.
++    """
++    original = value
+     if not unicode:
+         # Replace Extended Latin characters with ASCII, i.e. `žlutý` => `zluty`
+         value = unicodedata.normalize('NFKD', value)
+         value = value.encode('ascii', 'ignore').decode('ascii')
+-    value = re.sub(r'[^\w\s-]', '', value).strip().lower()
+-    return re.sub(r'[{}\s]+'.format(separator), separator, value)
++    value = ''.join(
++        c for c in value if _SLUG_CHAR_RE.match(c) or unicodedata.category(c) in ('Mn', 'Mc')
++    ).strip().lower()
++    value = re.sub(r'[{}\s]+'.format(separator), separator, value)
++    if not value and not unicode:
++        # Fall back to a Unicode slug of the original (un-normalized) text.
++        return slugify(original, separator, unicode=True)
++    return value
++
++
++_SLUG_CHAR_RE = re.compile(r'[\w\s-]')
+ 
+ 
+ def slugify_unicode(value: str, separator: str) -> str:
+diff --git a/tests/test_autose_issue_5.py b/tests/test_autose_issue_5.py
+new file mode 100644
+index 0000000..0984a35
+--- /dev/null
++++ b/tests/test_autose_issue_5.py
+@@ -0,0 +1,96 @@
++"""
++Acceptance tests for issue #5: readable `toc` anchors for non-Latin headings.
++"""
++
++import unittest
++
++import markdown
++from markdown.extensions.toc import TocExtension, slugify, slugify_unicode
++
++
++class TestAutoseIssue5(unittest.TestCase):
++    maxDiff = None
++
++    # FR-001
++
++    def test_ac_fr_001_01_russian_heading_readable_id(self):
++        self.assertEqual(
++            markdown.markdown('# Введение', extensions=['toc']),
++            '<h1 id="введение">Введение</h1>'
++        )
++
++    def test_ac_fr_001_02_multi_word_russian_uses_separator_and_toc_link(self):
++        out = markdown.markdown('[TOC]\n\n# Быстрый старт', extensions=['toc'])
++        self.assertIn('<h1 id="быстрый-старт">Быстрый старт</h1>', out)
++        self.assertIn('<a href="#быстрый-старт">Быстрый старт</a>', out)
++
++    def test_ac_fr_001_03_duplicate_non_latin_headings_unique(self):
++        self.assertEqual(
++            markdown.markdown('# Введение\n\n# Введение', extensions=['toc']),
++            '<h1 id="введение">Введение</h1>\n<h1 id="введение_1">Введение</h1>'
++        )
++
++    def test_ac_fr_001_04_latin_and_extended_latin_unchanged(self):
++        self.assertEqual(
++            markdown.markdown('# Žlutý kůň\n\n# Hello World', extensions=['toc']),
++            '<h1 id="zluty-kun">Žlutý kůň</h1>\n<h1 id="hello-world">Hello World</h1>'
++        )
++
++    def test_ac_fr_001_05_mixed_latin_cyrillic_keeps_ascii_slug(self):
++        self.assertEqual(
++            markdown.markdown('# Setup Настройка', extensions=['toc']),
++            '<h1 id="setup">Setup Настройка</h1>'
++        )
++
++    def test_ac_fr_001_06_no_word_characters_falls_back_to_numbered_id(self):
++        self.assertEqual(
++            markdown.markdown('# !!!', extensions=['toc']),
++            '<h1 id="_1">!!!</h1>'
++        )
++
++    def test_ac_fr_001_07_user_slugify_callable_used_as_is(self):
++        self.assertEqual(
++            markdown.markdown(
++                '# Введение',
++                extensions=[TocExtension(slugify=lambda value, separator: 'custom')]
++            ),
++            '<h1 id="custom">Введение</h1>'
++        )
++
++    def test_ac_fr_001_01_fallback_uses_composed_characters(self):
++        # `й` must stay a single composed character, not `и` + combining breve.
++        self.assertEqual(slugify('Настройка', '-'), 'настройка')
++        self.assertEqual(slugify('Ёлка', '-'), 'ёлка')
++
++    # FR-002
++
++    def test_ac_fr_002_01_hindi_heading_keeps_vowel_signs_by_default(self):
++        self.assertEqual(
++            markdown.markdown('# परिचय', extensions=['toc']),
++            '<h1 id="परिचय">परिचय</h1>'
++        )
++
++    def test_ac_fr_002_02_hindi_multi_word_keeps_marks_with_slugify_unicode(self):
++        self.assertEqual(
++            markdown.markdown(
++                '# नमस्ते दुनिया',
++                extensions=[TocExtension(slugify=slugify_unicode)]
++            ),
++            '<h1 id="नमस्ते-दुनिया">नमस्ते दुनिया</h1>'
++        )
++
++    def test_ac_fr_002_03_punctuation_still_stripped_from_unicode_slugs(self):
++        self.assertEqual(
++            markdown.markdown(
++                '# Unicode ヘッダー!',
++                extensions=[TocExtension(slugify=slugify_unicode)]
++            ),
++            '<h1 id="unicode-ヘッダー">Unicode ヘッダー!</h1>'
++        )
++
++    def test_ac_fr_002_04_ascii_mode_strips_latin_accents(self):
++        self.assertEqual(slugify('Žlutý kůň', '-'), 'zluty-kun')
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/tests/test_syntax/extensions/test_toc.py b/tests/test_syntax/extensions/test_toc.py
+index 12a07d5..8e7a07f 100644
+--- a/tests/test_syntax/extensions/test_toc.py
++++ b/tests/test_syntax/extensions/test_toc.py
+@@ -1217,6 +1217,53 @@ class TestTOC(TestCase):
+             extensions=[TocExtension(permalink=True, permalink_title="パーマリンク", slugify=slugify_unicode)]
+         )
+ 
++    def testNonLatinFallbackID(self):
++        self.assertMarkdownRenders(
++            '# Введение\n\n# Введение\n\n# Setup Настройка\n\n# !!!',
++            '<h1 id="введение">Введение</h1>\n'
++            '<h1 id="введение_1">Введение</h1>\n'
++            '<h1 id="setup">Setup Настройка</h1>\n'
++            '<h1 id="_1">!!!</h1>',
++            extensions=['toc']
++        )
++
++    def testNonLatinFallbackTOCLink(self):
++        self.assertMarkdownRenders(
++            '[TOC]\n\n# Быстрый старт',
++            '<div class="toc">\n'
++            '<ul>\n'
++            '<li><a href="#быстрый-старт">Быстрый старт</a></li>\n'
++            '</ul>\n'
++            '</div>\n'
++            '<h1 id="быстрый-старт">Быстрый старт</h1>',
++            extensions=['toc']
++        )
++
++    def testCombiningMarksKept(self):
++        from markdown.extensions.toc import slugify_unicode
++        self.assertMarkdownRenders(
++            '# परिचय',
++            '<h1 id="परिचय">परिचय</h1>',
++            extensions=['toc']
++        )
++        self.assertMarkdownRenders(
++            '# नमस्ते दुनिया',
++            '<h1 id="नमस्ते-दुनिया">नमस्ते दुनिया</h1>',
++            extensions=[TocExtension(slugify=slugify_unicode)]
++        )
++
++    def testCustomSlugifyNotAffectedByFallback(self):
++        self.assertMarkdownRenders(
++            '# Введение',
++            '<h1 id="custom">Введение</h1>',
++            extensions=[TocExtension(slugify=lambda value, separator: 'custom')]
++        )
++
++    def testSlugifyASCIIStripsAccents(self):
++        from markdown.extensions.toc import slugify
++        self.assertEqual(slugify('Žlutý kůň', '-'), 'zluty-kun')
++        self.assertEqual(slugify('Настройка', '-'), 'настройка')
++
+     def testPermalinkWithExtendedLatinInID(self):
+         self.assertMarkdownRenders(
+             '# Théâtre',

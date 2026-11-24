@@ -1,0 +1,34 @@
+diff --git a/markdown/blockprocessors.py b/markdown/blockprocessors.py
+index 728bf8f..ba1e270 100644
+--- a/markdown/blockprocessors.py
++++ b/markdown/blockprocessors.py
+@@ -448,6 +448,11 @@ class UListProcessor(OListProcessor):
+     TAG: str = 'ul'
+     """ The tag used for the the wrapping element. """
+ 
++
++    def test(self, parent: etree.Element, block: str) -> bool:
++        # Stop nesting unordered lists before Python's recursion limit is reached.
++        return bool(self.RE.match(block)) and not util.nearing_recursion_limit()
++
+     def __init__(self, parser: BlockParser):
+         super().__init__(parser)
+         # Detect an item (`1. item`). `group(1)` contains contents of item.
+diff --git a/tests/test_syntax/blocks/test_deep_lists.py b/tests/test_syntax/blocks/test_deep_lists.py
+new file mode 100644
+index 0000000..6303a69
+--- /dev/null
++++ b/tests/test_syntax/blocks/test_deep_lists.py
+@@ -0,0 +1,12 @@
++import markdown
++from markdown.test_tools import TestCase
++
++
++class TestDeepLists(TestCase):
++
++    def test_deep_unordered_list_does_not_raise(self):
++        result = markdown.markdown('- ' * 500 + 'x')
++        self.assertIn('x', result)
++
++    def test_shallow_list_unchanged(self):
++        self.assertMarkdownRenders('- a\n- b', '<ul>\n<li>a</li>\n<li>b</li>\n</ul>')

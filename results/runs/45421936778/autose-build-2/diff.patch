@@ -1,0 +1,231 @@
+diff --git a/docs/changelog.md b/docs/changelog.md
+index cba971a..f2de87b 100644
+--- a/docs/changelog.md
++++ b/docs/changelog.md
+@@ -31,6 +31,8 @@ See the [Contributing Guide](contributing.md) for details.
+   characters is followed by more text on the same line.
+ * Fix quadratic time when a document contains many unclosed HTML comments (`<!--`
+   with no matching `-->`).
++* Fix `RecursionError` on deeply nested lists (e.g. `'- ' * 500 + 'x'`). As with
++  blockquotes, list nesting now stops when nearing the recursion limit.
+ * Fix regression in `BacktickInlineProcessor` where text could be lost when opening
+   and closing backticks did not match (#1668).
+ * Escape the language name in the `codehilite` extension's non-Pygments output to
+diff --git a/markdown/blockprocessors.py b/markdown/blockprocessors.py
+index 728bf8f..1f2ba66 100644
+--- a/markdown/blockprocessors.py
++++ b/markdown/blockprocessors.py
+@@ -176,7 +176,8 @@ class ListIndentProcessor(BlockProcessor):
+             not self.parser.state.isstate('detabbed') and \
+             (parent.tag in self.ITEM_TYPES or
+                 (len(parent) and parent[-1] is not None and
+-                    (parent[-1].tag in self.LIST_TYPES)))
++                    (parent[-1].tag in self.LIST_TYPES))) and \
++            not util.nearing_recursion_limit()
+ 
+     def run(self, parent: etree.Element, blocks: list[str]) -> None:
+         block = blocks.pop(0)
+@@ -354,7 +355,7 @@ class OListProcessor(BlockProcessor):
+                                     (self.tab_length, self.tab_length * 2 - 1))
+ 
+     def test(self, parent: etree.Element, block: str) -> bool:
+-        return bool(self.RE.match(block))
++        return bool(self.RE.match(block)) and not util.nearing_recursion_limit()
+ 
+     def run(self, parent: etree.Element, blocks: list[str]) -> None:
+         # Check for multiple items in one block.
+diff --git a/tests/test_autose_issue_2.py b/tests/test_autose_issue_2.py
+new file mode 100644
+index 0000000..3dad82c
+--- /dev/null
++++ b/tests/test_autose_issue_2.py
+@@ -0,0 +1,109 @@
++"""
++Acceptance tests for issue #2: RecursionError on deeply nested lists.
++"""
++
++import unittest
++
++import markdown
++from markdown.test_tools import TestCase
++
++
++class TestDeepInlineListMarkers(TestCase):
++    """FR-001: deeply nested inline list markers must not raise."""
++
++    def test_ac_fr_001_01_500_unordered_markers(self):
++        source = '- ' * 500 + 'x'
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++        self.assertTrue(result.startswith('<ul>'))
++        self.assertIn('x', result)
++
++    def test_ac_fr_001_02_500_ordered_markers(self):
++        source = '1. ' * 500 + 'x'
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++        self.assertTrue(result.startswith('<ol>'))
++        self.assertIn('x', result)
++
++    def test_ac_fr_001_03_5000_unordered_markers(self):
++        source = '- ' * 5000 + 'x'
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++        self.assertIn('x', result)
++
++    def test_ac_fr_001_04_asterisk_markers(self):
++        source = '* ' * 500 + 'x'
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++        self.assertIn('x', result)
++
++    def test_ac_fr_001_04_plus_markers(self):
++        source = '+ ' * 500 + 'x'
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++        self.assertIn('x', result)
++
++
++class TestProgressivelyIndentedLists(TestCase):
++    """FR-002: many progressively indented list lines must not raise."""
++
++    def test_ac_fr_002_01_unordered_4_space_steps(self):
++        source = '\n'.join(' ' * (4 * i) + '- x' for i in range(300))
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++        self.assertTrue(result.startswith('<ul>'))
++
++    def test_ac_fr_002_02_ordered_loose_4_space_steps(self):
++        source = '\n\n'.join(' ' * (4 * i) + '1. x' for i in range(300))
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++        self.assertTrue(result.startswith('<ol>'))
++
++    def test_ac_fr_002_03_unordered_1_space_steps(self):
++        source = '\n'.join(' ' * i + '- x' for i in range(300))
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++
++
++class TestShallowNestedListsUnchanged(TestCase):
++    """FR-003: shallow nested lists render exactly as before."""
++
++    def test_ac_fr_003_01_three_level_tight_unordered(self):
++        self.assertEqual(
++            markdown.markdown('* Tab\n    * Tab\n        * Tab'),
++            '<ul>\n<li>Tab<ul>\n<li>Tab<ul>\n<li>Tab</li>\n</ul>\n</li>\n</ul>\n</li>\n</ul>'
++        )
++
++    def test_ac_fr_003_02_ordered_with_nested_unordered_tight(self):
++        self.assertEqual(
++            markdown.markdown('1. First\n2. Second:\n    * Fee\n    * Fie\n    * Foe\n3. Third'),
++            '<ol>\n<li>First</li>\n<li>Second:<ul>\n<li>Fee</li>\n<li>Fie</li>\n<li>Foe</li>\n</ul>\n'
++            '</li>\n<li>Third</li>\n</ol>'
++        )
++
++    def test_ac_fr_003_03_loose_ordered_with_nested_unordered(self):
++        self.assertEqual(
++            markdown.markdown('1. First\n\n2. Second:\n    * Fee\n    * Fie\n    * Foe\n\n3. Third'),
++            '<ol>\n<li>\n<p>First</p>\n</li>\n<li>\n<p>Second:</p>\n<ul>\n<li>Fee</li>\n<li>Fie</li>\n'
++            '<li>Foe</li>\n</ul>\n</li>\n<li>\n<p>Third</p>\n</li>\n</ol>'
++        )
++
++    def _run_named_test(self, name):
++        suite = unittest.defaultTestLoader.loadTestsFromName(name)
++        self.assertGreater(suite.countTestCases(), 0, name)
++        result = unittest.TestResult()
++        suite.run(result)
++        self.assertTrue(
++            result.wasSuccessful(),
++            '{} failed: {}'.format(name, [str(e[1]) for e in result.errors + result.failures])
++        )
++
++    def test_ac_fr_003_04_legacy_ordered_and_unordered_fixture(self):
++        self._run_named_test('tests.test_legacy.TestBasic.test_ordered_and_unordered_list')
++
++    def test_ac_fr_003_04_blockquote_nesting_limit(self):
++        self._run_named_test('tests.test_syntax.blocks.test_blockquotes.TestBlockquoteBlocks.test_nesting_limit')
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/tests/test_syntax/blocks/test_ul.py b/tests/test_syntax/blocks/test_ul.py
+index f90d43a..cef4c56 100644
+--- a/tests/test_syntax/blocks/test_ul.py
++++ b/tests/test_syntax/blocks/test_ul.py
+@@ -20,7 +20,8 @@ License: BSD (see LICENSE.md for details).
+ """
+ 
+ import unittest
+-from markdown.test_tools import TestCase
++import markdown
++from markdown.test_tools import TestCase, recursionlimit
+ 
+ 
+ class TestUnorderedLists(TestCase):
+@@ -135,3 +136,65 @@ class TestUnorderedLists(TestCase):
+                 """
+             )
+         )
++
++
++class TestListNestingLimit(TestCase):
++    """ Deeply nested lists must not raise `RecursionError`. """
++
++    def render(self, source):
++        result = markdown.markdown(source)
++        self.assertIsInstance(result, str)
++        return result
++
++    def test_nested_unordered_markers(self):
++        for marker in ('- ', '* ', '+ '):
++            with self.subTest(marker=marker):
++                result = self.render(marker * 500 + 'x')
++                self.assertTrue(result.startswith('<ul>'))
++                self.assertIn('x', result)
++
++    def test_nested_ordered_markers(self):
++        result = self.render('1. ' * 500 + 'x')
++        self.assertTrue(result.startswith('<ol>'))
++        self.assertIn('x', result)
++
++    def test_very_deeply_nested_markers(self):
++        result = self.render('- ' * 5000 + 'x')
++        self.assertIn('x', result)
++
++    def test_progressively_indented_lines(self):
++        result = self.render('\n'.join(' ' * (4 * i) + '- x' for i in range(300)))
++        self.assertTrue(result.startswith('<ul>'))
++
++    def test_progressively_indented_loose_ordered(self):
++        result = self.render('\n\n'.join(' ' * (4 * i) + '1. x' for i in range(300)))
++        self.assertTrue(result.startswith('<ol>'))
++
++    def test_progressively_indented_by_one_space(self):
++        self.render('\n'.join(' ' * i + '- x' for i in range(300)))
++
++    def test_nesting_limit_with_lowered_recursion_limit(self):
++        with recursionlimit(150):
++            result = self.render('- ' * 50 + 'x')
++        self.assertTrue(result.startswith('<ul>'))
++        self.assertIn('x', result)
++
++    def test_shallow_tight_nesting_unchanged(self):
++        self.assertMarkdownRenders(
++            '* Tab\n    * Tab\n        * Tab',
++            '<ul>\n<li>Tab<ul>\n<li>Tab<ul>\n<li>Tab</li>\n</ul>\n</li>\n</ul>\n</li>\n</ul>'
++        )
++
++    def test_shallow_mixed_nesting_unchanged(self):
++        self.assertMarkdownRenders(
++            '1. First\n2. Second:\n    * Fee\n    * Fie\n    * Foe\n3. Third',
++            '<ol>\n<li>First</li>\n<li>Second:<ul>\n<li>Fee</li>\n<li>Fie</li>\n<li>Foe</li>\n</ul>\n</li>\n'
++            '<li>Third</li>\n</ol>'
++        )
++
++    def test_shallow_loose_nesting_unchanged(self):
++        self.assertMarkdownRenders(
++            '1. First\n\n2. Second:\n    * Fee\n    * Fie\n    * Foe\n\n3. Third',
++            '<ol>\n<li>\n<p>First</p>\n</li>\n<li>\n<p>Second:</p>\n<ul>\n<li>Fee</li>\n<li>Fie</li>\n'
++            '<li>Foe</li>\n</ul>\n</li>\n<li>\n<p>Third</p>\n</li>\n</ol>'
++        )

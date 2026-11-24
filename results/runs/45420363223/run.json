@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T15:00:02Z",
+  "databaseId": 45420363223,
+  "displayTitle": "wikilinks: support [[Page Name|link text]]",
+  "event": "issue_comment",
+  "status": "completed",
+  "updatedAt": "2026-11-24T15:00:56Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45420363223",
+  "jobs": {
+    "gate": "success",
+    "review": "success",
+    "build": "skipped",
+    "release": "skipped",
+    "route": "success"
+  }
+}

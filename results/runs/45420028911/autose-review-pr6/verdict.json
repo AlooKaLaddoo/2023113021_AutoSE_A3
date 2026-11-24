@@ -1,0 +1,54 @@
+{
+  "reviewer": {
+    "issue_asks": [
+      "`#d {id}` with toc + attr_list must not raise TypeError",
+      "Crash must be fixed with and without a [TOC] marker",
+      "A valueless id should behave as if no id was given (normal slug generated)",
+      "Headings with a real id like `# Title {#my-id}` must keep working unchanged"
+    ],
+    "checklist": {
+      "addresses_every_issue_point": true,
+      "existing_tests_pass": true,
+      "own_probe_done": true,
+      "no_regression_found": true,
+      "fits_codebase_design": true,
+      "no_out_of_scope_changes": true
+    },
+    "findings": [
+      {
+        "severity": "minor",
+        "file": "markdown/extensions/toc.py",
+        "line": 403,
+        "problem": "`not el.attrib.get(\"id\")` also treats an explicit empty id (`{id=\"\"}`) as missing, so a slug is now generated where before the empty id was kept. This is arguably better (an empty id is invalid HTML), but it is a small behaviour change beyond the issue. Also line 392 still adds the None value to `used_ids`; this is harmless.",
+        "evidence": "python probe: '# x {id=\"\"}' -> <h1 id=\"x\">x</h1> (the base code kept the empty id, as read from the code path `\"id\" not in el.attrib`)."
+      }
+    ],
+    "commands_run": [
+      "git show HEAD --stat",
+      "python -m unittest discover -s tests -t .  (1168 tests OK, 52 skipped)",
+      "probe script: '#d {id}', duplicate '{id}' headings, '{id}' next to a real '{#a}' id, '{id=\"\"}', '{id=\"\" .c}', [TOC] with several '{id}' headings, each with and without anchorlink/permalink"
+    ],
+    "verdict": "approve",
+    "route": "none",
+    "summary": "The one-line fix in toc.py treats a None id as missing, so a slug is generated. I ran the full suite (all pass) and my own probes. `#d {id}` renders `<h1 id=\"d\">`. Duplicate bare ids get unique slugs (a, a_1). A bare id next to a real id `{#a}` gets a_1 and does not clash. The TOC, anchorlink and permalink outputs are all correct. Explicit ids are untouched. The two new tests check the issue's exact input, with and without [TOC], and no existing tests were changed. The only side effect is that an empty `id=\"\"` now also gets a slug, which is a minor point."
+  },
+  "decision": {
+    "final": "approve",
+    "route": "none",
+    "why": "every checklist item is true and there is no blocker/major finding"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": true,
+    "error": "",
+    "turns": 10,
+    "seconds": 24.4,
+    "cost_usd_nominal": 0.0709,
+    "input_tokens": 126179,
+    "output_tokens": 2937,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "main",
+  "head_sha": "caffb91baebe445150f81651d8801d97a59a848e"
+}

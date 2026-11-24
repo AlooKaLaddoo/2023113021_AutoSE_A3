@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T14:59:56Z",
+  "databaseId": 45420346443,
+  "displayTitle": "Prevent RecursionError on deeply nested lists",
+  "event": "issue_comment",
+  "status": "completed",
+  "updatedAt": "2026-11-24T15:01:11Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45420346443",
+  "jobs": {
+    "gate": "success",
+    "review": "success",
+    "build": "skipped",
+    "release": "skipped",
+    "route": "success"
+  }
+}

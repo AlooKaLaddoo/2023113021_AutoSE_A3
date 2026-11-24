@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T15:08:11Z",
+  "databaseId": 45421961357,
+  "displayTitle": "Wikilinks: allow custom link text with `[[Page Name|link text]]`",
+  "event": "issue_comment",
+  "status": "completed",
+  "updatedAt": "2026-11-24T15:12:54Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45421961357",
+  "jobs": {
+    "gate": "success",
+    "build": "success",
+    "route": "success",
+    "release": "skipped",
+    "review": "skipped"
+  }
+}

@@ -1,0 +1,482 @@
+diff --git a/.github/autose/checks.py b/.github/autose/checks.py
+index 8e5da21..5b73516 100644
+--- a/.github/autose/checks.py
++++ b/.github/autose/checks.py
+@@ -144,22 +144,8 @@ def run(cmd: list[str] | str, cwd: Path, timeout: int = 900) -> tuple[int, str]:
+     return p.returncode, (p.stdout + p.stderr)
+ 
+ 
+-# Claude Code's Bash sandbox (bubblewrap) creates empty placeholder files for sensitive paths in the working
+-# directory and leaves them behind (seen in run 45420334361, PR #11). They are never part of a change.
+-SANDBOX_STUBS = {".env", ".env.local", ".env.development", ".env.development.local", ".env.production",
+-                 ".env.production.local", ".env.test", ".env.test.local", ".gitmodules", ".npmrc", ".yarnrc",
+-                 ".yarnrc.yml", "bunfig.toml", "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock",
+-                 ".mcp.json", ".bashrc", ".profile", ".gitconfig"}
+-
+-
+ def changed_files(worktree: Path, base: str) -> list[str]:
+     run(["git", "add", "-A"], worktree)
+-    _, out = run(["git", "diff", "--cached", "--name-only", "--diff-filter=A", base], worktree)
+-    for f in out.splitlines():
+-        p = worktree / f
+-        if "/" not in f and (f in SANDBOX_STUBS or f.startswith(".env")) and p.is_file() and p.stat().st_size == 0:
+-            run(["git", "rm", "-q", "-f", "--cached", f], worktree)
+-            p.unlink(missing_ok=True)
+     _, out = run(["git", "diff", "--cached", "--name-only", base], worktree)
+     return [l for l in out.splitlines() if l]
+ 
+diff --git a/.github/autose/orchestrator.py b/.github/autose/orchestrator.py
+index 7fd38e4..1ad00da 100644
+--- a/.github/autose/orchestrator.py
++++ b/.github/autose/orchestrator.py
+@@ -181,7 +181,7 @@ def acceptance_test_path(issue_no: int) -> str:
+ 
+ 
+ def stage_implement(run: Run, spec: str, design: str, impl: Path, base: str, feedback: str, attempt: int,
+-                    issue_no: int, writes_tests: bool, review_md: str, start: str) -> checks.Check:
++                    issue_no: int, writes_tests: bool, review_md: str) -> checks.Check:
+     test_path = acceptance_test_path(issue_no)
+     prompt = ("Implement the change described by the specification and the design below, in this repository.\n\n"
+               f"<spec>\n{spec}\n</spec>\n\n<design>\n{design}\n</design>\n")
+@@ -203,9 +203,7 @@ def stage_implement(run: Run, spec: str, design: str, impl: Path, base: str, fee
+     def forbidden(f: str) -> bool:
+         protected = f.startswith((".github/", ".claude/")) or f == "CLAUDE.md"
+         return protected or (not writes_tests and f == test_path)
+-    # Compare with the round's starting commit: in round 2+ the acceptance tests already exist on the branch.
+-    reverted = checks.enforce_allowlist(impl, start, allowed=lambda f: True, forbidden=forbidden)
+-    checks.changed_files(impl, base)  # also drops sandbox placeholder files relative to the base
++    reverted = checks.enforce_allowlist(impl, base, allowed=lambda f: True, forbidden=forbidden)
+     if reverted:
+         run.log("implementation", "reverted out-of-scope changes", ", ".join(reverted))
+     chk = checks.check_build(impl, base)
+@@ -313,16 +311,14 @@ def build(args):
+     # ---- stages 3 + 4 with retries
+     writes_tests = bool(var.get("skip_tester"))
+     test_path = acceptance_test_path(issue_no)
+-    # Reuse the branch's acceptance tests only when the spec is reused too (a new spec has new AC ids).
+-    tests_exist_on_branch = (impl / test_path).exists() and args.from_stage != "requirements"
++    tests_exist_on_branch = (impl / test_path).exists()
+     ac_chk, on_base, attempts, final = None, None, [], None
+     impl_review = review_md if args.from_stage == "implementation" else ""
+     feedback, n, revisions = "", 0, 0
+     while True:
+         for _ in range(BUDGET["impl_attempts_per_design"]):
+             n += 1
+-            bchk = stage_implement(run, spec, design, impl, base, feedback, n, issue_no, writes_tests, impl_review,
+-                                   args.start_sha or base)
++            bchk = stage_implement(run, spec, design, impl, base, feedback, n, issue_no, writes_tests, impl_review)
+             attempt = {"n": n, "build": bchk.ok, "note": "; ".join(bchk.problems)}
+             attempts.append(attempt)
+             run.state["stages"]["implementation"] = {"ok": bchk.ok, "attempts": n, "problems": bchk.problems,
+diff --git a/docs/changelog.md b/docs/changelog.md
+index cba971a..94f0839 100644
+--- a/docs/changelog.md
++++ b/docs/changelog.md
+@@ -14,6 +14,12 @@ See the [Contributing Guide](contributing.md) for details.
+ 
+ ## [Unreleased]
+ 
++### Changed
++
++* Support custom link text in the `wikilinks` extension with
++  `[[Page Name|link text]]`. The URL is built from the page name only, and an
++  empty link text falls back to the page name.
++
+ ### Fixed
+ 
+ * Support automatic links with URL schemes other than HTTP and FTP, such as
+diff --git a/docs/extensions/wikilinks.md b/docs/extensions/wikilinks.md
+index b0f2538..c674029 100644
+--- a/docs/extensions/wikilinks.md
++++ b/docs/extensions/wikilinks.md
+@@ -53,6 +53,26 @@ extensions: [wikilinks]
+ [[Wiki Link]]
+ ```
+ 
++To display text other than the page name, add the link text after a pipe
++(`|`): ``[[Page Name|link text]]``. The URL (and class) is built from the page
++name only, exactly as for ``[[Page Name]]``; the link text is only used as the
++text of the link.
++
++``` md-render
++---
++extensions: [wikilinks]
++---
++[[Wiki Link|see the wiki]]
++```
++
++Whitespace around the page name and the link text is ignored. If the link text
++is empty (``[[Page Name|]]``), the page name is used as the text. Only the first
++`|` separates the page name from the link text; any later `|` is part of the
++link text. The link text cannot contain `]]` or a line break and is intended to
++be plain text. Note that this form does not work inside the cells of a table
++created by the [Tables](tables.md) extension, as the `|` is treated as a cell
++separator there.
++
+ ## Usage
+ 
+ See [Extensions](index.md) for general extension usage. Use `wikilinks` as the
+diff --git a/markdown/extensions/wikilinks.py b/markdown/extensions/wikilinks.py
+index 70d0ea5..7298658 100644
+--- a/markdown/extensions/wikilinks.py
++++ b/markdown/extensions/wikilinks.py
+@@ -13,7 +13,8 @@
+ # License: [BSD](https://opensource.org/licenses/bsd-license.php)
+ 
+ """
+-Converts `[[WikiLinks]]` to relative links.
++Converts `[[WikiLinks]]` to relative links. Custom link text may be given
++with `[[Page Name|link text]]`.
+ 
+ See the [documentation](https://Python-Markdown.github.io/extensions/wikilinks)
+ for details.
+@@ -23,6 +24,7 @@ from __future__ import annotations
+ 
+ from . import Extension
+ from ..inlinepatterns import InlineProcessor
++from .. import util
+ import xml.etree.ElementTree as etree
+ import re
+ from typing import Any
+@@ -59,7 +61,9 @@ class WikiLinkExtension(Extension):
+         self.md = md
+ 
+         # append to end of inline patterns
+-        WIKILINK_RE = r'\[\[([\w0-9_ -]+)\]\]'
++        # Group 1 is the page name; optional group 2 is the link text after the
++        # single `|` (it may not contain `[`, `]`, `|` or a newline).
++        WIKILINK_RE = r'\[\[([\w0-9_ -]+)(?:\|([^\[\]\|\n]*))?\]\]'
+         wikilinkPattern = WikiLinksInlineProcessor(WIKILINK_RE, self.getConfigs())
+         wikilinkPattern.md = md
+         md.inlinePatterns.register(wikilinkPattern, 'wikilink', 75)
+@@ -77,8 +81,9 @@ class WikiLinksInlineProcessor(InlineProcessor):
+             base_url, end_url, html_class = self._getMeta()
+             label = m.group(1).strip()
+             url = self.config['build_url'](label, base_url, end_url)
++            text = self._restore_raw_html(m.group(2) or '').strip()
+             a = etree.Element('a')
+-            a.text = label
++            a.text = text or label
+             a.set('href', url)
+             if html_class:
+                 a.set('class', html_class)
+@@ -86,6 +91,43 @@ class WikiLinksInlineProcessor(InlineProcessor):
+             a = ''
+         return a, m.start(0), m.end(0)
+ 
++    def _restore_raw_html(self, text: str) -> str:
++        """
++        Replace stashed raw inline HTML (tags, comments, etc.) in the link text
++        with its source, so that it is escaped as ordinary text. Entities and
++        any other placeholders are left untouched.
++        """
++        def raw_html(placeholder: str) -> str | None:
++            m = util.HTML_PLACEHOLDER_RE.fullmatch(placeholder)
++            if m is None:
++                return None
++            try:
++                raw = self.md.htmlStash.rawHtmlBlocks[int(m.group(1))]
++            except (IndexError, ValueError):
++                return None
++            if isinstance(raw, str) and raw.startswith('<'):
++                return raw
++            return None
++
++        def repl_html(m: re.Match[str]) -> str:
++            raw = raw_html(m.group(0))
++            return m.group(0) if raw is None else raw
++
++        def repl_inline(m: re.Match[str]) -> str:
++            # The `html` pattern's placeholder is itself stashed as an inline node.
++            try:
++                node = self.md.treeprocessors['inline'].stashed_nodes.get(m.group(1))
++            except (KeyError, AttributeError):  # pragma: no cover
++                return m.group(0)
++            if isinstance(node, str):
++                raw = raw_html(node)
++                if raw is not None:
++                    return raw
++            return m.group(0)
++
++        text = util.INLINE_PLACEHOLDER_RE.sub(repl_inline, text)
++        return util.HTML_PLACEHOLDER_RE.sub(repl_html, text)
++
+     def _getMeta(self) -> tuple[str, str, str]:
+         """ Return meta data or `config` data. """
+         base_url = self.config['base_url']
+diff --git a/tests/test_autose_issue_3.py b/tests/test_autose_issue_3.py
+new file mode 100644
+index 0000000..dbdeec7
+--- /dev/null
++++ b/tests/test_autose_issue_3.py
+@@ -0,0 +1,139 @@
++"""
++Acceptance tests for issue #3: piped wikilinks `[[Page Name|link text]]`.
++"""
++
++import unittest
++
++import markdown
++from markdown.extensions.wikilinks import WikiLinkExtension
++
++
++class TestPipedWikiLinks(unittest.TestCase):
++    """ FR-001: render piped wikilinks with custom link text. """
++
++    def setUp(self):
++        self.md = markdown.Markdown(extensions=['wikilinks'])
++
++    def test_ac_fr_001_01_basic_piped_link(self):
++        self.assertEqual(
++            self.md.convert('[[Installation Guide|see the install docs]]'),
++            '<p><a class="wikilink" href="/Installation_Guide/">see the install docs</a></p>'
++        )
++
++    def test_ac_fr_001_02_whitespace_ignored(self):
++        self.assertEqual(
++            self.md.convert('[[ Installation Guide | see the install docs ]]'),
++            '<p><a class="wikilink" href="/Installation_Guide/">see the install docs</a></p>'
++        )
++
++    def test_ac_fr_001_03_simple_settings(self):
++        self.assertEqual(
++            markdown.markdown(
++                'Some text with a [[WikiLink|a link]].',
++                extensions=[WikiLinkExtension(base_url='/wiki/', end_url='.html', html_class='foo')]
++            ),
++            '<p>Some text with a <a class="foo" href="/wiki/WikiLink.html">a link</a>.</p>'
++        )
++
++    def test_ac_fr_001_04_empty_html_class(self):
++        md = markdown.Markdown(
++            extensions=['wikilinks'],
++            extension_configs={
++                'wikilinks': {
++                    'base_url': 'http://example.com/',
++                    'end_url': '.html',
++                    'html_class': '',
++                }
++            }
++        )
++        self.assertEqual(
++            md.convert('[[WikiLink|a link]]'),
++            '<p><a href="http://example.com/WikiLink.html">a link</a></p>'
++        )
++
++    def test_ac_fr_001_05_metadata_overrides(self):
++        text = (
++            'wiki_base_url: http://example.com/\n'
++            'wiki_end_url:   .html\n'
++            'wiki_html_class:\n'
++            '\n'
++            'Some text with a [[WikiLink|a link]].'
++        )
++        md = markdown.Markdown(extensions=['meta', 'wikilinks'])
++        self.assertEqual(
++            md.convert(text),
++            '<p>Some text with a <a href="http://example.com/WikiLink.html">a link</a>.</p>'
++        )
++
++    def test_ac_fr_001_06_build_url_receives_page_name(self):
++        calls = []
++
++        def my_url_builder(label, base, end):
++            calls.append((label, base, end))
++            return '/bar/'
++
++        md = markdown.Markdown(extensions=[WikiLinkExtension(build_url=my_url_builder)])
++        self.assertEqual(
++            md.convert('[[ foo | some text ]]'),
++            '<p><a class="wikilink" href="/bar/">some text</a></p>'
++        )
++        self.assertEqual(calls, [('foo', '/', '/')])
++
++    def test_ac_fr_001_07_internal_whitespace_preserved(self):
++        self.assertEqual(
++            self.md.convert('[[foo|double  spaces]]'),
++            '<p><a class="wikilink" href="/foo/">double  spaces</a></p>'
++        )
++
++    def test_ac_fr_001_08_special_characters_escaped(self):
++        self.assertEqual(
++            self.md.convert('[[foo|Q&A <docs>]]'),
++            '<p><a class="wikilink" href="/foo/">Q&amp;A &lt;docs&gt;</a></p>'
++        )
++
++
++class TestPipedWikiLinksFallback(unittest.TestCase):
++    """ FR-002: fallback to page name; plain wikilinks unchanged. """
++
++    def setUp(self):
++        self.md = markdown.Markdown(extensions=['wikilinks'])
++
++    def test_ac_fr_002_01_empty_text_falls_back(self):
++        self.assertEqual(
++            self.md.convert('[[Installation Guide|]]'),
++            '<p><a class="wikilink" href="/Installation_Guide/">Installation Guide</a></p>'
++        )
++
++    def test_ac_fr_002_02_whitespace_text_falls_back(self):
++        self.assertEqual(
++            self.md.convert('[[ Installation Guide |   ]]'),
++            '<p><a class="wikilink" href="/Installation_Guide/">Installation Guide</a></p>'
++        )
++
++    def test_ac_fr_002_03_plain_wikilinks_unchanged(self):
++        self.assertEqual(
++            self.md.convert('Some text with a [[WikiLink]].'),
++            '<p>Some text with a <a class="wikilink" href="/WikiLink/">WikiLink</a>.</p>'
++        )
++        self.assertEqual(
++            self.md.convert('[[ foo bar_baz ]]'),
++            '<p><a class="wikilink" href="/foo_bar_baz/">foo bar_baz</a></p>'
++        )
++        self.assertEqual(
++            self.md.convert('foo [[ ]] bar'),
++            '<p>foo  bar</p>'
++        )
++
++    def test_ac_fr_002_04_empty_page_name_no_link(self):
++        output = self.md.convert('foo [[ |text]] bar')
++        self.assertNotIn('<a', output)
++
++    def test_ac_fr_002_05_multiple_pipes_literal(self):
++        self.assertEqual(
++            self.md.convert('[[a|b|c]]'),
++            '<p>[[a|b|c]]</p>'
++        )
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/tests/test_extensions.py b/tests/test_extensions.py
+index b8bc3c8..86290e3 100644
+--- a/tests/test_extensions.py
++++ b/tests/test_extensions.py
+@@ -252,6 +252,126 @@ Some text with a [[WikiLink]]."""
+             '<p><a class="wikilink" href="/bar/">foo</a></p>'
+         )
+ 
++    def testCustomLinkText(self):
++        """ Test `[[Page Name|link text]]`. """
++        self.assertEqual(
++            self.md.convert('See [[Installation Guide|see the install docs]].'),
++            '<p>See <a class="wikilink" href="/Installation_Guide/">see the install docs</a>.</p>'
++        )
++        self.assertEqual(
++            self.md.convert('[[ Installation Guide | see the install docs ]]'),
++            '<p><a class="wikilink" href="/Installation_Guide/">see the install docs</a></p>'
++        )
++        self.assertEqual(self.md.convert('[[a|b|c]]'), '<p>[[a|b|c]]</p>')
++        self.assertEqual(
++            self.md.convert('[[Page|a & b]]'),
++            '<p><a class="wikilink" href="/Page/">a &amp; b</a></p>'
++        )
++        self.assertEqual(
++            self.md.convert('[[foo|double  spaces]]'),
++            '<p><a class="wikilink" href="/foo/">double  spaces</a></p>'
++        )
++        self.assertEqual(
++            self.md.convert('[[foo|Q&A <docs>]]'),
++            '<p><a class="wikilink" href="/foo/">Q&amp;A &lt;docs&gt;</a></p>'
++        )
++
++    def testCustomLinkTextEntityAndBrackets(self):
++        """ Test entities are kept and brackets are not allowed in link text. """
++        self.assertEqual(
++            self.md.convert('[[foo|&copy; x]]'),
++            '<p><a class="wikilink" href="/foo/">&copy; x</a></p>'
++        )
++        self.assertNotIn('<a class="wikilink"', self.md.convert('[[foo|a]b]]'))
++        self.assertNotIn('<a class="wikilink"', self.md.convert('[[foo|a[b]]'))
++
++    def testCustomLinkTextEmpty(self):
++        """ Test empty link text falls back to the page name. """
++        self.assertEqual(
++            self.md.convert('[[Installation Guide|]]'),
++            '<p><a class="wikilink" href="/Installation_Guide/">Installation Guide</a></p>'
++        )
++        self.assertEqual(
++            self.md.convert('[[ Installation Guide |   ]]'),
++            '<p><a class="wikilink" href="/Installation_Guide/">Installation Guide</a></p>'
++        )
++        self.assertEqual(self.md.convert('foo [[ |text]] bar'), '<p>foo  bar</p>')
++
++    def testCustomLinkTextSettings(self):
++        """ Test custom link text with settings, meta-data and `build_url`. """
++        from markdown.extensions.wikilinks import WikiLinkExtension
++
++        md = markdown.Markdown(extensions=[
++            WikiLinkExtension(base_url='/wiki/', end_url='.html', html_class='foo')
++        ])
++        self.assertEqual(
++            md.convert('[[WikiLink|the text]]'),
++            '<p><a class="foo" href="/wiki/WikiLink.html">the text</a></p>'
++        )
++
++        labels = []
++
++        def my_url_builder(label, base, end):
++            labels.append(label)
++            return '/x/' + label + '/'
++
++        md = markdown.Markdown(extensions=[WikiLinkExtension(build_url=my_url_builder)])
++        self.assertEqual(
++            md.convert('[[foo|bar]]'),
++            '<p><a class="wikilink" href="/x/foo/">bar</a></p>'
++        )
++        self.assertEqual(labels, ['foo'])
++
++        text = """wiki_base_url: http://example.com/
++wiki_end_url:   .html
++wiki_html_class:
++
++Some text with a [[WikiLink|custom]]."""
++        md = markdown.Markdown(extensions=['meta', 'wikilinks'])
++        self.assertEqual(
++            md.convert(text),
++            '<p>Some text with a '
++            '<a href="http://example.com/WikiLink.html">custom</a>.</p>'
++        )
++
++        # Exact spec cases.
++        self.assertEqual(
++            markdown.markdown('Some text with a [[WikiLink|a link]].', extensions=[
++                WikiLinkExtension(base_url='/wiki/', end_url='.html', html_class='foo')
++            ]),
++            '<p>Some text with a <a class="foo" href="/wiki/WikiLink.html">a link</a>.</p>'
++        )
++
++        md = markdown.Markdown(
++            extensions=['wikilinks'],
++            extension_configs={
++                'wikilinks': {'base_url': 'http://example.com/', 'end_url': '.html', 'html_class': ''}
++            }
++        )
++        self.assertEqual(
++            md.convert('[[WikiLink|a link]]'),
++            '<p><a href="http://example.com/WikiLink.html">a link</a></p>'
++        )
++
++        md = markdown.Markdown(extensions=['meta', 'wikilinks'])
++        self.assertEqual(
++            md.convert(text.replace('[[WikiLink|custom]]', '[[WikiLink|a link]]')),
++            '<p>Some text with a <a href="http://example.com/WikiLink.html">a link</a>.</p>'
++        )
++
++        calls = []
++
++        def recording_builder(label, base, end):
++            calls.append((label, base, end))
++            return '/bar/'
++
++        md = markdown.Markdown(extensions=[WikiLinkExtension(build_url=recording_builder)])
++        self.assertEqual(
++            md.convert('[[ foo | some text ]]'),
++            '<p><a class="wikilink" href="/bar/">some text</a></p>'
++        )
++        self.assertEqual(calls, [('foo', '/', '/')])
++
+ 
+ class TestAdmonition(unittest.TestCase):
+     """ Test Admonition Extension. """

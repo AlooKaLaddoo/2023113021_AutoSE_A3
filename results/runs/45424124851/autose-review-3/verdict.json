@@ -1,0 +1,54 @@
+{
+  "reviewer": {
+    "issue_asks": [
+      "Support [[Page Name|link text]] rendering as a link with the given text",
+      "Link target/class must be identical to [[Page Name]] (base_url, end_url, html_class, custom build_url, wiki_* meta overrides)",
+      "Whitespace around name and text is ignored",
+      "Empty text part falls back to the page name",
+      "Plain [[Page Name]] must behave unchanged"
+    ],
+    "checklist": {
+      "addresses_every_issue_point": true,
+      "existing_tests_pass": true,
+      "own_probe_done": true,
+      "no_regression_found": true,
+      "fits_codebase_design": true,
+      "no_out_of_scope_changes": true
+    },
+    "findings": [
+      {
+        "severity": "minor",
+        "file": "markdown/extensions/wikilinks.py",
+        "line": 62,
+        "problem": "Link text cannot contain `[` or `]`, so `[[Page|see [docs]]]` is not recognized. This is documented in docs/extensions/wikilinks.md, and the issue's examples don't need it.",
+        "evidence": "python -c: '[[a|[b]]]' -> <p>[[a|[b]]]</p>"
+      }
+    ],
+    "commands_run": [
+      "python -m unittest discover -s tests -t .  (1177 tests, OK, 52 skipped)",
+      "python -c probes: [[a|b]], [[a|*em*]], [[a|b\\nc]], [[a b|]], [[a| ]], [[a |b]], [[a|b|c]], [[a|b]]], \\[[a|b]], [[\u00e9|\u00fc]], [[a|`x`]] and [[b]]"
+    ],
+    "verdict": "approve",
+    "route": "none",
+    "summary": "The change is correct and minimal. It extends the regex with an optional `|text` group and uses the stripped text, falling back to the page name when the text is empty. The URL is still built from the page name only, so base_url, end_url, html_class, a custom build_url and the meta overrides all behave as for plain links. The full suite passes. My probes showed that whitespace is stripped, an empty or whitespace-only text part falls back to the page name, and plain links are unchanged. Multiple pipes, newlines and brackets in the text leave the input as-is. Inline markup in the text is rendered like normal link text. The only limitation is that link text cannot contain `[` or `]`, which the docs state. The new tests check the behaviour the issue asks for, and no existing tests were changed."
+  },
+  "decision": {
+    "final": "approve",
+    "route": "none",
+    "why": "every checklist item is true and there is no blocker/major finding"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": true,
+    "error": "",
+    "turns": 4,
+    "seconds": 12.7,
+    "cost_usd_nominal": 0.0537,
+    "input_tokens": 31707,
+    "output_tokens": 1761,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "e2_implementer_writes_tests",
+  "head_sha": "82ab2fb2fbb71f4623997e387ec560d6e46ad44d"
+}

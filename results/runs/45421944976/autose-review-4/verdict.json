@@ -1,0 +1,63 @@
+{
+  "reviewer": {
+    "issue_asks": [
+      "Built-in extension loadable as extensions=['strikethrough']",
+      "Render ~~text~~ as <del>text</del>",
+      "Other inline markup (bold, emphasis, links) inside still works",
+      "A single ~ or an unclosed ~~ is left alone",
+      "Off unless the extension is enabled (existing behaviour unchanged)"
+    ],
+    "checklist": {
+      "addresses_every_issue_point": true,
+      "existing_tests_pass": true,
+      "own_probe_done": true,
+      "no_regression_found": true,
+      "fits_codebase_design": true,
+      "no_out_of_scope_changes": true
+    },
+    "findings": [
+      {
+        "severity": "minor",
+        "file": "ARCHITECTURE.md",
+        "line": 20,
+        "problem": "ARCHITECTURE.md says '18 built-in extensions'; there are now 19. Docs only, non-blocking.",
+        "evidence": "grep of ARCHITECTURE.md line 20: 'and 18 built-in extensions'"
+      },
+      {
+        "severity": "minor",
+        "file": "docs/extensions/index.md",
+        "line": 59,
+        "problem": "The new table row is wider than the column alignment of its neighbours. Cosmetic only.",
+        "evidence": "'[Strikethrough]                    | `strikethrough` | ...' versus the aligned rows above it"
+      }
+    ],
+    "commands_run": [
+      "python -m unittest discover -s tests -t .  (1200 tests, OK, skipped=52)",
+      "probe script with 15+ inputs under extensions=['strikethrough'] (unclosed, ~~~foo~~~, ~~~~, ~~a~~b~~, nested code, link, img, list, inline HTML, escaped, smarty/toc/tables/attr_list/footnotes combo)",
+      "python -c markdown.markdown('x \\~ y') with and without the extension",
+      "short-name load via entry point"
+    ],
+    "verdict": "approve",
+    "route": "none",
+    "summary": "The change adds a new `strikethrough` extension. It uses `SimpleTagInlineProcessor` registered at priority 65 in the inlinepatterns registry, declares an entry point in pyproject.toml, and adds docs, a changelog entry and tests. This is the right layer, and it matches how `tables` and `smarty` extend `ESCAPED_CHARS`. The full suite passes (1200 tests). My own probes behaved as the issue asks:\\n- `~~foo~~` renders `<del>foo</del>`.\\n- Bold, emphasis, links, code spans and inline HTML nest correctly inside it.\\n- Single tildes, unclosed `~~`, whitespace-flanked `~~ b ~~`, `~~~foo~~~` and `~~~~` are left literal.\\n- `\\\\~` is escaped only when the extension is enabled; without it, output is unchanged (`x \\\\~ y` keeps the backslash).\\n- The short name loads through the entry point, and the extension combines with smarty, toc, tables, attr_list and footnotes.\\n\\nThe tests assert real behaviour and no existing tests were weakened. Only two minor doc nits remain: the extension count in ARCHITECTURE.md and the table alignment in the extensions index."
+  },
+  "decision": {
+    "final": "approve",
+    "route": "none",
+    "why": "every checklist item is true and there is no blocker/major finding"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": true,
+    "error": "",
+    "turns": 13,
+    "seconds": 28.1,
+    "cost_usd_nominal": 0.1228,
+    "input_tokens": 179309,
+    "output_tokens": 3616,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "main",
+  "head_sha": "8e06d526cc1799847a3ffa3a87930f7c6d7c77a2"
+}

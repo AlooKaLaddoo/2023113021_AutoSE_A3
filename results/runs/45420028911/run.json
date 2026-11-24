@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T14:58:13Z",
+  "databaseId": 45420028911,
+  "displayTitle": "Fix toc crash on a heading with a valueless id attribute",
+  "event": "issue_comment",
+  "status": "completed",
+  "updatedAt": "2026-11-24T14:59:32Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45420028911",
+  "jobs": {
+    "gate": "success",
+    "review": "success",
+    "build": "skipped",
+    "release": "skipped",
+    "route": "success"
+  }
+}

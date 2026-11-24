@@ -1,0 +1,77 @@
+{
+  "reviewer": {
+    "summary": "The PR keeps Hindi and other Indic combining marks in `slugify_unicode` and adds docs and tests, but it introduces a regression. Emoji with a variation selector (U+FE0F, category `Mn`) now leave invisible characters in the id. The default `slugify` is unchanged, so default-config Hindi and Russian headings still produce `#_1`, `#_2`. The full suite passes (1185 tests, 52 skipped).",
+    "verdict": "request_changes",
+    "route": "implementation",
+    "issue_asks": [
+      "Hindi and Russian headings should get readable, meaningful ids instead of _1, _2, ...",
+      "Section links should be shareable and understandable",
+      "Improve the toc extension for non-English docs",
+      "Existing behaviour (default ASCII slugify, other unicode handling) should not regress"
+    ],
+    "checklist": {
+      "addresses_every_issue_point": false,
+      "existing_tests_pass": true,
+      "own_probe_done": true,
+      "no_regression_found": false,
+      "fits_codebase_design": true,
+      "no_out_of_scope_changes": true
+    },
+    "commands_run": [
+      "python -m unittest discover -s tests -t .",
+      "python -c slugify_unicode probes on Hindi, Cyrillic, Arabic, Korean, ZWJ, accents",
+      "python -c slugify_unicode('\u2764\ufe0f Love') and markdown.markdown('# \u2764\ufe0f Love', extensions=[TocExtension(slugify=slugify_unicode)])",
+      "python -c re-implementation of the old slugify_unicode regex on '\u2764\ufe0f Love' and '\u2764\ufe0f'",
+      "python -c markdown.markdown('# \u041f\u0440\u0438\u0432\u0435\u0442 \u043c\u0438\u0440\\n## \u0928\u092e\u0938\u094d\u0924\u0947', extensions=['toc'])"
+    ],
+    "findings": [
+      {
+        "severity": "major",
+        "file": "markdown/extensions/toc.py",
+        "line": 48,
+        "problem": "Keeping every Mn/Mc character is too broad and regresses emoji headings. Emoji variation selectors (U+FE0F, category Mn) are now kept while the emoji itself (So) is dropped. Ids start with an invisible character, and emoji-only headings get a non-empty invisible id instead of the empty-slug fallback (`_1`). Old logic gave 'love' and ''.",
+        "evidence": "`slugify_unicode('\u2764\ufe0f Love','-')` printed `'\ufe0f-love'`, and `slugify_unicode('\u2764\ufe0f','-')` printed `'\ufe0f'`. `markdown.markdown('# \u2764\ufe0f Love', extensions=[TocExtension(slugify=slugify_unicode)])` printed `<h1 id=\"\ufe0f-love\">`. The old regex `re.sub(r'[^\\w\\s-]','',v)` on the same inputs gave 'love' and ''. A combining mark should only be kept when it follows a kept base character, or variation selectors (U+FE00\u2013FE0F) should be excluded."
+      },
+      {
+        "severity": "major",
+        "file": "markdown/extensions/toc.py",
+        "line": 41,
+        "problem": "The issue reporter's complaint is about the default configuration, which is unchanged. Hindi and Russian headings with default settings still produce `_1`, `_2`. Russian already worked with `slugify_unicode` before this PR, so the only code change addresses Hindi marks. The docs note that `slugify_unicode` keeps non-Latin scripts, but nothing says the default drops them or points users hitting `_1` to the option, for example in the `slugify` option description or a warning near the default. The scope may be acceptable for backward compatibility, but the discoverability gap remains.",
+        "evidence": "`markdown.markdown('# \u041f\u0440\u0438\u0432\u0435\u0442 \u043c\u0438\u0440\\n## \u0928\u092e\u0938\u094d\u0924\u0947', extensions=['toc'])` printed `<h1 id=\"_1\">\u041f\u0440\u0438\u0432\u0435\u0442 \u043c\u0438\u0440</h1>\\n<h2 id=\"_2\">\u0928\u092e\u0938\u094d\u0924\u0947</h2>`."
+      },
+      {
+        "severity": "minor",
+        "file": "tests/test_autose_issue_5.py",
+        "line": 1,
+        "problem": "This new test file duplicates most of the tests added to tests/test_syntax/extensions/test_toc.py: Hindi, Cyrillic, punctuation, and the default-unchanged case. Tests that read the docs file by string matching are brittle. No test covers combining marks on characters that are otherwise dropped, such as emoji variation selectors.",
+        "evidence": "Diff shows the same assertions in both files, for example `slugify_unicode('\u0939\u093f\u0928\u094d\u0926\u0940', '-')` and `'# \u041f\u0440\u0438\u0432\u0435\u0442 \u043c\u0438\u0440'`."
+      },
+      {
+        "severity": "minor",
+        "file": "markdown/extensions/toc.py",
+        "line": 47,
+        "problem": "Zero-width joiner and non-joiner (U+200D, U+200C, category Cf) are still stripped, so conjuncts like '\u0915\u094d\u200d\u0937' lose their joiner. The id is still readable, so this is cosmetic. The per-character `re.match` is also slower than a single compiled regex.",
+        "evidence": "`slugify_unicode('\u0915\u094d\u200d\u0937','-')` printed `'\u0915\u094d\u0937'`."
+      }
+    ]
+  },
+  "decision": {
+    "final": "request_changes",
+    "route": "implementation",
+    "why": "2 blocker/major finding(s) with evidence"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": true,
+    "error": "",
+    "turns": 6,
+    "seconds": 29.5,
+    "cost_usd_nominal": 0.0896,
+    "input_tokens": 90771,
+    "output_tokens": 3747,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "main",
+  "head_sha": "d9954805a9d58955e39213125db2029c1988bc67"
+}

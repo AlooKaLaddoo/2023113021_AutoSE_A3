@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T15:00:03Z",
+  "databaseId": 45420369818,
+  "displayTitle": "toc: generate readable ids for non-Latin headings",
+  "event": "issue_comment",
+  "status": "completed",
+  "updatedAt": "2026-11-24T15:01:10Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45420369818",
+  "jobs": {
+    "gate": "success",
+    "review": "success",
+    "build": "skipped",
+    "release": "skipped",
+    "route": "success"
+  }
+}

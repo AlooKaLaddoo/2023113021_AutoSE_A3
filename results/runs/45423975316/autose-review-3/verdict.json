@@ -1,0 +1,69 @@
+{
+  "reviewer": {
+    "issue_asks": [
+      "Support [[Page Name|link text]] in wikilinks, rendering a link with the custom text",
+      "URL/class must be identical to [[Page Name]]: base_url, end_url, html_class, custom build_url (receives page name only), wiki_* meta overrides",
+      "Whitespace around the page name and the text is ignored",
+      "Empty link text falls back to the page name",
+      "Plain [[Page Name]] must keep working unchanged"
+    ],
+    "checklist": {
+      "addresses_every_issue_point": true,
+      "existing_tests_pass": true,
+      "own_probe_done": true,
+      "no_regression_found": true,
+      "fits_codebase_design": true,
+      "no_out_of_scope_changes": true
+    },
+    "findings": [
+      {
+        "severity": "minor",
+        "file": "markdown/extensions/wikilinks.py",
+        "line": 84,
+        "problem": "Link text that contains another link or autolink produces nested <a> elements, because higher-priority inline patterns (link, autolink) have already run on the text. The docs say the text is 'intended to be plain text', so this does not block.",
+        "evidence": "markdown.markdown('[[foo|[bar](u)]]', extensions=['wikilinks']) -> '<p><a class=\"wikilink\" href=\"/foo/\"><a href=\"u\">bar</a></a></p>'"
+      },
+      {
+        "severity": "minor",
+        "file": "markdown/extensions/wikilinks.py",
+        "line": 94,
+        "problem": "The _restore_raw_html helper reaches into the htmlStash and the inline treeprocessor's stashed_nodes to turn raw inline HTML back into text. It works, but it is fairly intricate, and it depends on private internals of the inline treeprocessor.",
+        "evidence": "repl_inline uses self.md.treeprocessors['inline'].stashed_nodes. Probes with <b>, <script>, <br> and comments all came out safely escaped."
+      },
+      {
+        "severity": "minor",
+        "file": "tests/test_autose_issue_3.py",
+        "line": 1,
+        "problem": "Many of the new tests in test_extensions.py are duplicated in tests/test_autose_issue_3.py. This is redundant but harmless.",
+        "evidence": "The same cases appear in both files, for example '[[ foo | some text ]]' with the build_url recorder."
+      }
+    ],
+    "commands_run": [
+      "python -m unittest discover -s tests -t .",
+      "python probe of ~30 inputs: emphasis, code, raw HTML, entities, escapes, newline, multiple pipes, empty text, whitespace, nested brackets, tables, toc, footnotes, smarty",
+      "git diff --stat"
+    ],
+    "verdict": "approve",
+    "route": "none",
+    "summary": "The change meets every point in the issue. The full suite passes: 1183 tests, 52 skipped, no failures. My own probes behaved as expected. Whitespace is trimmed, empty or whitespace-only text falls back to the page name, and the URL and class come from the page name only. Plain [[X]] output is unchanged. Raw HTML in the link text is escaped rather than injected, and entities are kept. The regex rejects `[`, `]`, `|` and newlines in the text, so those inputs stay literal, with no crashes. The only side effect is that a previously literal `[[a|b]]` now becomes a link, which is what the issue wants. Existing tests were not weakened. The remaining findings are minor: a nested `<a>` when the text itself holds a link, and a somewhat intricate `_restore_raw_html` helper that reads private inline-processor state. The docs also note that the piped form does not work inside table cells."
+  },
+  "decision": {
+    "final": "approve",
+    "route": "none",
+    "why": "every checklist item is true and there is no blocker/major finding"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": true,
+    "error": "",
+    "turns": 5,
+    "seconds": 23.9,
+    "cost_usd_nominal": 0.11,
+    "input_tokens": 69022,
+    "output_tokens": 3265,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "main",
+  "head_sha": "9f44cb9b63b49029161c8eb1923c861c0a9f947e"
+}

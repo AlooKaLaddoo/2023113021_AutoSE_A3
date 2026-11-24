@@ -1,0 +1,11 @@
+{
+  "branch": "autose/issue-5",
+  "ok": true,
+  "head_sha": "faf76b726263a593363c8b74ed32f32d7983a6a9",
+  "pr": 14,
+  "url": "https://github.com/AlooKaLaddoo/markdown/pull/14",
+  "ci_url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45423598584",
+  "ci": "success",
+  "pr_state": "OPEN",
+  "ci_seconds": 23
+}

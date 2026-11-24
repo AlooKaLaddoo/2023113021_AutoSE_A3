@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T15:08:02Z",
+  "databaseId": 45421929335,
+  "displayTitle": "TypeError in toc when a heading has a bare `{id}` attribute",
+  "event": "issues",
+  "status": "completed",
+  "updatedAt": "2026-11-24T15:13:10Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45421929335",
+  "jobs": {
+    "gate": "success",
+    "build": "success",
+    "release": "success",
+    "review": "success",
+    "route": "success"
+  }
+}

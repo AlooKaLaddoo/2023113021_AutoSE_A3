@@ -1,0 +1,12 @@
+run_id,pr,seed,variant,model,expected,got,correct,expected_route,got_route,reviewer_raw_verdict,blocking_findings,probe_done,input_tokens,output_tokens,cost_usd_nominal,minutes,url
+45419585282,6,S1,main,claude-sonnet-5-5,approve,approve,True,none,none,request_changes,0,False,77209,2794,0.104,1.1,https://github.com/AlooKaLaddoo/markdown/actions/runs/45419585282
+45420028911,6,S1,main,claude-sonnet-5-5,approve,approve,True,none,none,approve,0,True,126179,2937,0.071,1.3,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420028911
+45420346443,7,S2,main,claude-sonnet-5-5,request_changes,request_changes,True,implementation,implementation,request_changes,2,True,118265,3693,0.082,1.2,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420346443
+45420363223,8,S3,main,claude-sonnet-5-5,request_changes,request_changes,True,implementation,implementation,request_changes,2,True,26966,1415,0.039,0.9,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420363223
+45420369818,10,S5,main,claude-sonnet-5-5,request_changes,request_changes,True,implementation,design,request_changes,3,True,27926,2805,0.058,1.1,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420369818
+45420379967,9,S4,main,claude-sonnet-5-5,request_changes,request_changes,True,design,design,request_changes,2,True,55059,2096,0.051,1.2,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420379967
+45420758833,6,S1,e1_friendly_reviewer,claude-opus-5-5,approve,request_changes,False,none,implementation,request_changes,1,True,109972,3630,0.234,1.6,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420758833
+45420767118,7,S2,e1_friendly_reviewer,claude-opus-5-5,request_changes,request_changes,True,implementation,implementation,request_changes,2,True,38633,1892,0.093,1.1,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420767118
+45420776142,8,S3,e1_friendly_reviewer,claude-opus-5-5,request_changes,request_changes,True,implementation,implementation,request_changes,2,True,26103,1828,0.149,1.0,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420776142
+45420782434,9,S4,e1_friendly_reviewer,claude-opus-5-5,request_changes,request_changes,True,design,design,request_changes,3,True,27830,1873,0.101,1.2,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420782434
+45420788760,10,S5,e1_friendly_reviewer,claude-opus-5-5,request_changes,request_changes,True,implementation,design,request_changes,3,True,40333,2543,0.112,4.5,https://github.com/AlooKaLaddoo/markdown/actions/runs/45420788760

@@ -1,0 +1,68 @@
+{
+  "reviewer": {
+    "issue_asks": [
+      "Provide a built-in extension usable as extensions=['strikethrough']",
+      "Render ~~text~~ as <del>text</del>",
+      "Other inline markup (bold, emphasis, links) inside still works",
+      "A single ~ or unclosed ~~ is left alone",
+      "Off unless the extension is enabled (default behaviour must not change)"
+    ],
+    "checklist": {
+      "addresses_every_issue_point": false,
+      "existing_tests_pass": true,
+      "own_probe_done": true,
+      "no_regression_found": false,
+      "fits_codebase_design": false,
+      "no_out_of_scope_changes": true
+    },
+    "findings": [
+      {
+        "severity": "blocker",
+        "file": "markdown/inlinepatterns.py",
+        "line": 95,
+        "problem": "The strikethrough pattern is registered in the core build_inlinepatterns, so it is always on. The issue requires it to be off unless the extension is enabled. This changes default output for every user, and the extension is an empty no-op. It also goes against the repo's extension pattern, where optional syntax is registered in extendMarkdown.",
+        "evidence": "markdown.markdown('~~a~~ x') with no extensions prints '<p><del>a</del> x</p>'. The extension's extendMarkdown body is just `pass`."
+      },
+      {
+        "severity": "major",
+        "file": "tests/test_syntax/extensions/test_strikethrough.py",
+        "line": 1,
+        "problem": "The tests never check that the feature is off by default. They also don't cover a single ~, an unclosed ~~, or links and emphasis inside ~~. A test for the default-off requirement would have failed on this change.",
+        "evidence": "The file has only test_basic and test_with_bold, both run with extensions=['strikethrough']."
+      },
+      {
+        "severity": "minor",
+        "file": "markdown/extensions/strikethrough.py",
+        "line": 1,
+        "problem": "The docstring says the pattern lives in core so the extension 'keeps working'. That describes a design that contradicts the issue. There is also no docs or changelog entry for the new extension.",
+        "evidence": "The docstring reads: 'The pattern itself is part of the core inline patterns'."
+      }
+    ],
+    "commands_run": [
+      "python -m unittest discover -s tests -t .  (1168 tests, OK)",
+      "python /tmp/claude/p.py (probes: default vs extension output, single ~ and unclosed ~~, link and em inside ~~, ~~~~)"
+    ],
+    "verdict": "request_changes",
+    "route": "design",
+    "summary": "Request changes. The `~~` pattern is registered in the core inline patterns, so strikethrough is always on, and the `strikethrough` extension does nothing. Without the extension, `markdown.markdown('~~a~~ x')` already returns `<p><del>a</del> x</p>`. The issue explicitly asks for the feature to be off unless the extension is enabled. Existing tests pass (1168 OK). Nesting, a single `~` and an unclosed `~~` behave correctly, but the default-off requirement is violated and untested. The pattern needs to move into the extension's `extendMarkdown`, with a test that it stays off by default."
+  },
+  "decision": {
+    "final": "request_changes",
+    "route": "design",
+    "why": "2 blocker/major finding(s) with evidence"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": true,
+    "error": "",
+    "turns": 6,
+    "seconds": 18.9,
+    "cost_usd_nominal": 0.0505,
+    "input_tokens": 55059,
+    "output_tokens": 2096,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "main",
+  "head_sha": "974119b34cbf9967e422578fda29079592cde252"
+}

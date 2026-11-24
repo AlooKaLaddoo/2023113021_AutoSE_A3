@@ -1,0 +1,69 @@
+{
+  "reviewer": {
+    "issue_asks": [
+      "`'- ' * 500 + 'x'` must not raise RecursionError",
+      "`'1. ' * 500 + 'x'` (ordered lists) must not raise RecursionError",
+      "Many lines each indented slightly more than the previous (nested list lines) must not raise",
+      "Normal 2-3 level nested lists must render exactly as before",
+      "Follow the blockquote protection pattern (util.nearing_recursion_limit)"
+    ],
+    "checklist": {
+      "addresses_every_issue_point": false,
+      "existing_tests_pass": true,
+      "own_probe_done": true,
+      "no_regression_found": true,
+      "fits_codebase_design": false,
+      "no_out_of_scope_changes": true
+    },
+    "findings": [
+      {
+        "severity": "blocker",
+        "file": "markdown/blockprocessors.py",
+        "line": 452,
+        "problem": "The recursion guard was added only to UListProcessor.test. OListProcessor.test (line 356) is unguarded, so ordered lists still raise RecursionError, which the issue explicitly lists. The same applies to indented ordered-list lines.",
+        "evidence": "Probe on PR head: markdown.markdown('1. ' * 500 + 'x') -> RecursionError; markdown.markdown('\\n'.join(' '*(4*i) + '1. x' for i in range(300))) -> RecursionError. The unordered variants ('- ' * 500, indented '- x' lines) now return ok."
+      },
+      {
+        "severity": "major",
+        "file": "tests/test_syntax/blocks/test_deep_lists.py",
+        "line": 7,
+        "problem": "Tests cover only the unordered case. There is no test for ordered lists or indented-line nesting, both named in the issue, which is why the remaining crash went unnoticed. The deep-list test also only asserts 'x' is in the output.",
+        "evidence": "The file contains only test_deep_unordered_list_does_not_raise and test_shallow_list_unchanged."
+      },
+      {
+        "severity": "minor",
+        "file": "markdown/blockprocessors.py",
+        "line": 451,
+        "problem": "Extra blank line before the `test` method, and `test` is placed before `__init__`. Style is inconsistent with the surrounding code. A guard in OListProcessor.test would also be inherited by UListProcessor, which already overrides RE in __init__.",
+        "evidence": "diff hunk at @@ -448,6 +448,11 @@ shows two blank lines and then `def test` above `def __init__`."
+      }
+    ],
+    "commands_run": [
+      "python -m unittest discover -s tests -t .  (1168 tests, OK, skipped=52)",
+      "probe script: ul500, ol500, indented ul/ol/text lines, mixed '- 1. ' nesting, '> ' * 500, 3-level nested ul",
+      "grep for def test / nearing_recursion_limit in markdown/blockprocessors.py and markdown/util.py"
+    ],
+    "verdict": "request_changes",
+    "route": "implementation",
+    "summary": "The PR fixes only unordered lists. Ordered lists still raise RecursionError, including '1. ' * 500 + 'x' from the issue and 300 lines of '1. x' each indented 4 spaces more than the last. The fix belongs in OListProcessor.test, which UListProcessor inherits. Tests cover only the unordered case. The existing suite passes and a 3-level nested unordered list renders as before."
+  },
+  "decision": {
+    "final": "request_changes",
+    "route": "implementation",
+    "why": "2 blocker/major finding(s) with evidence"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": true,
+    "error": "",
+    "turns": 11,
+    "seconds": 29.9,
+    "cost_usd_nominal": 0.0819,
+    "input_tokens": 118265,
+    "output_tokens": 3693,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "main",
+  "head_sha": "9fdd3f937a687db4b71397a5cad95be365ce52c3"
+}

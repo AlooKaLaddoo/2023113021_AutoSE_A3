@@ -1,0 +1,12 @@
+{
+  "branch": "autose/issue-5-e2_implementer_writes_tests",
+  "variant": "e2_implementer_writes_tests",
+  "ok": true,
+  "head_sha": "1dab3afa857fb60ca066aa8f7829a1010b6779de",
+  "url": "https://github.com/AlooKaLaddoo/markdown/pull/20",
+  "pr": 20,
+  "ci_url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45425127841",
+  "ci": "success",
+  "pr_state": "OPEN",
+  "ci_seconds": 33
+}

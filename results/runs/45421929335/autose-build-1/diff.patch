@@ -1,0 +1,240 @@
+diff --git a/docs/changelog.md b/docs/changelog.md
+index cba971a..0143496 100644
+--- a/docs/changelog.md
++++ b/docs/changelog.md
+@@ -16,6 +16,8 @@ See the [Contributing Guide](contributing.md) for details.
+ 
+ ### Fixed
+ 
++* Fix a `TypeError` in the `toc` extension when a heading has a valueless
++  `{id}` attribute; a slug is now generated as if no id was given.
+ * Support automatic links with URL schemes other than HTTP and FTP, such as
+   `<ssh://example.org>` (#1244).
+ * Fix quadratic-time id generation in the `toc` extension when many headers
+diff --git a/markdown/extensions/toc.py b/markdown/extensions/toc.py
+index ba65225..8df22fe 100644
+--- a/markdown/extensions/toc.py
++++ b/markdown/extensions/toc.py
+@@ -388,7 +388,7 @@ class TocTreeprocessor(Treeprocessor):
+         # Get a list of id attributes
+         used_ids = set()
+         for el in doc.iter():
+-            if "id" in el.attrib:
++            if el.attrib.get("id") is not None:
+                 used_ids.add(el.attrib["id"])
+         id_counters: dict[str, int] = {}
+ 
+@@ -399,8 +399,9 @@ class TocTreeprocessor(Treeprocessor):
+                 innerhtml = render_inner_html(remove_fnrefs(el), self.md)
+                 name = strip_tags(innerhtml)
+ 
+-                # Do not override pre-existing ids
+-                if "id" not in el.attrib:
++                # Do not override pre-existing ids. A valueless id (e.g. a bare
++                # `{id}` from `attr_list`) is `None` and counts as no id.
++                if el.attrib.get("id") is None:
+                     el.attrib["id"] = unique(self.slugify(html.unescape(name), self.sep), used_ids, id_counters)
+ 
+                 data_toc_label = ''
+diff --git a/tests/test_autose_issue_1.py b/tests/test_autose_issue_1.py
+new file mode 100644
+index 0000000..67f7097
+--- /dev/null
++++ b/tests/test_autose_issue_1.py
+@@ -0,0 +1,93 @@
++"""
++Acceptance tests for issue #1: TypeError in toc when a heading has a bare `{id}` attribute.
++"""
++
++import unittest
++
++import markdown
++from markdown.extensions.toc import TocExtension
++from markdown.test_tools import TestCase
++
++
++class TestBareIdOnHeading(TestCase):
++
++    maxDiff = None
++
++    def test_ac_fr_001_01_reported_reproduction(self):
++        result = markdown.markdown('#d {id}', extensions=['toc', 'attr_list'])
++        self.assertEqual(result, '<h1 id="d">d</h1>')
++
++    def test_ac_fr_001_02_bare_id_with_toc_marker(self):
++        md = markdown.Markdown(extensions=['toc', 'attr_list'])
++        html = md.convert('[TOC]\n\n# Some Title {id}')
++        self.assertIn('<h1 id="some-title">Some Title</h1>', html)
++        self.assertIn('<div class="toc">', html)
++        toc_div = html[html.index('<div class="toc">'):html.index('</div>') + len('</div>')]
++        self.assertIn('<a href="#some-title">Some Title</a>', toc_div)
++        self.assertEqual(
++            md.toc_tokens,
++            [{
++                'level': 1,
++                'id': 'some-title',
++                'name': 'Some Title',
++                'html': 'Some Title',
++                'data-toc-label': '',
++                'children': [],
++            }]
++        )
++
++    def test_ac_fr_001_03_generated_slug_is_unique(self):
++        result = markdown.markdown('# Title\n\n# Title {id}', extensions=['toc', 'attr_list'])
++        self.assertEqual(result, '<h1 id="title">Title</h1>\n<h1 id="title_1">Title</h1>')
++
++    def test_ac_fr_001_04_bare_id_with_other_attributes(self):
++        result = markdown.markdown('# Title {id .cls}', extensions=['toc', 'attr_list'])
++        self.assertEqual(result, '<h1 class="cls" id="title">Title</h1>')
++
++    def test_ac_fr_001_05_bare_id_with_permalink(self):
++        result = markdown.markdown('# Title {id}', extensions=['attr_list', TocExtension(permalink=True)])
++        self.assertIn('<h1 id="title">', result)
++        self.assertIn('href="#title"', result)
++        self.assertIn('class="headerlink"', result)
++
++    def test_ac_fr_001_05_bare_id_with_anchorlink(self):
++        result = markdown.markdown('# Title {id}', extensions=['attr_list', TocExtension(anchorlink=True)])
++        self.assertIn('<h1 id="title">', result)
++        self.assertIn('href="#title"', result)
++        self.assertIn('class="toclink"', result)
++
++
++class TestExistingIdHandling(TestCase):
++
++    def test_ac_fr_002_01_explicit_id_not_overridden(self):
++        md = markdown.Markdown(extensions=['toc', 'attr_list'])
++        result = md.convert('# Title {#my-id}')
++        self.assertEqual(result, '<h1 id="my-id">Title</h1>')
++        self.assertEqual(md.toc_tokens[0]['id'], 'my-id')
++
++    def test_ac_fr_002_02_heading_without_attributes_gets_slug(self):
++        result = markdown.markdown('# Title', extensions=['toc', 'attr_list'])
++        self.assertEqual(result, '<h1 id="title">Title</h1>')
++
++    def test_ac_fr_002_03_existing_toc_and_attr_list_tests_pass(self):
++        # Running the whole suite from inside a test would recurse into this file,
++        # so run the existing toc and attr_list test modules named by the criterion.
++        # The full suite is run by the pipeline itself.
++        loader = unittest.TestLoader()
++        suite = unittest.TestSuite([
++            loader.loadTestsFromName('tests.test_syntax.extensions.test_toc'),
++            loader.loadTestsFromName('tests.test_syntax.extensions.test_attr_list'),
++        ])
++        result = unittest.TestResult()
++        suite.run(result)
++        self.assertGreater(result.testsRun, 0)
++        self.assertEqual(result.failures, [])
++        self.assertEqual(result.errors, [])
++
++    def test_ac_fr_002_04_valueless_id_without_toc_unchanged(self):
++        result = markdown.markdown('# Title {id}', extensions=['attr_list'])
++        self.assertEqual(result, '<h1 id>Title</h1>')
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/tests/test_syntax/extensions/test_attr_list.py b/tests/test_syntax/extensions/test_attr_list.py
+index 73c7796..7ce60b7 100644
+--- a/tests/test_syntax/extensions/test_attr_list.py
++++ b/tests/test_syntax/extensions/test_attr_list.py
+@@ -231,6 +231,12 @@ class TestAttrListValuelessAttributes(TestCase):
+             '<h1 download>Heading</h1>'
+         )
+ 
++    def test_valueless_id_on_heading(self):
++        self.assertMarkdownRenders(
++            '# Title {id}',
++            '<h1 id>Title</h1>'
++        )
++
+     def test_get_attrs_and_remainder_marks_valueless_as_none(self):
+         from markdown.extensions.attr_list import get_attrs_and_remainder
+         attrs, remainder = get_attrs_and_remainder('download checked key=value .cls #the-id')
+diff --git a/tests/test_syntax/extensions/test_toc.py b/tests/test_syntax/extensions/test_toc.py
+index 12a07d5..6c32f46 100644
+--- a/tests/test_syntax/extensions/test_toc.py
++++ b/tests/test_syntax/extensions/test_toc.py
+@@ -1033,6 +1033,81 @@ class TestTOC(TestCase):
+             extensions=['toc']
+         )
+ 
++    def test_valueless_id(self):
++        self.assertMarkdownRenders(
++            '#d {id}',
++            '<h1 id="d">d</h1>',
++            extensions=['toc', 'attr_list']
++        )
++
++    def test_valueless_id_with_toc_marker(self):
++        self.assertMarkdownRenders(
++            '[TOC]\n\n# Some Title {id}',
++            self.dedent(
++                '''
++                <div class="toc">
++                <ul>
++                <li><a href="#some-title">Some Title</a></li>
++                </ul>
++                </div>
++                <h1 id="some-title">Some Title</h1>
++                '''
++            ),
++            expected_attrs={
++                'toc_tokens': [
++                    {
++                        'level': 1,
++                        'id': 'some-title',
++                        'name': 'Some Title',
++                        'html': 'Some Title',
++                        'data-toc-label': '',
++                        'children': []
++                    }
++                ]
++            },
++            extensions=['toc', 'attr_list']
++        )
++
++    def test_valueless_id_unique(self):
++        self.assertMarkdownRenders(
++            '# Title\n\n# Title {id}',
++            '<h1 id="title">Title</h1>\n<h1 id="title_1">Title</h1>',
++            extensions=['toc', 'attr_list']
++        )
++
++    def test_valueless_id_with_other_attrs(self):
++        self.assertMarkdownRenders(
++            '# Title {id .cls}',
++            '<h1 class="cls" id="title">Title</h1>',
++            extensions=['toc', 'attr_list']
++        )
++
++    def test_valueless_id_with_permalink(self):
++        self.assertMarkdownRenders(
++            '# Title {id}',
++            '<h1 id="title">Title<a class="headerlink" href="#title" title="Permanent link">&para;</a></h1>',
++            extensions=['attr_list', TocExtension(permalink=True)]
++        )
++
++    def test_valueless_id_with_anchorlink(self):
++        self.assertMarkdownRenders(
++            '# Title {id}',
++            '<h1 id="title"><a class="toclink" href="#title">Title</a></h1>',
++            extensions=['attr_list', TocExtension(anchorlink=True)]
++        )
++
++    def test_explicit_id_with_attr_list(self):
++        md = Markdown(extensions=['toc', 'attr_list'])
++        self.assertEqual(md.convert('# Title {#my-id}'), '<h1 id="my-id">Title</h1>')
++        self.assertEqual(md.toc_tokens[0]['id'], 'my-id')
++
++    def test_no_id_with_attr_list(self):
++        self.assertMarkdownRenders(
++            '# Title',
++            '<h1 id="title">Title</h1>',
++            extensions=['toc', 'attr_list']
++        )
++
+     def test_escaped_char_in_id(self):
+         self.assertMarkdownRenders(
+             r'# escaped\_character',

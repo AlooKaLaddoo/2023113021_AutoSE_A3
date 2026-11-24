@@ -1,0 +1,61 @@
+{
+  "reviewer": {
+    "issue_asks": [
+      "Support [[Page Name|link text]] syntax in wikilinks",
+      "Link must point exactly where [[Page Name]] points (base_url, end_url, html_class, build_url, wiki_* meta), only text differs",
+      "Whitespace around name and text is ignored",
+      "Empty text part falls back to page name",
+      "Plain [[Page Name]] unchanged"
+    ],
+    "checklist": {
+      "addresses_every_issue_point": false,
+      "existing_tests_pass": true,
+      "own_probe_done": true,
+      "no_regression_found": true,
+      "fits_codebase_design": true,
+      "no_out_of_scope_changes": true
+    },
+    "findings": [
+      {
+        "severity": "blocker",
+        "file": "markdown/extensions/wikilinks.py",
+        "line": 78,
+        "problem": "The URL is built from the link text instead of the page name. `label` is overridden by the custom text and then passed to build_url, so [[Page|text]] points to /text/ rather than where [[Page]] points. This defeats the core requirement. The page name should be passed to build_url and the text used only for a.text.",
+        "evidence": "python -c \"import markdown; print(markdown.markdown('[[Installation Guide|see the install docs]]', extensions=['wikilinks']))\" printed <a class=\"wikilink\" href=\"/see_the_install_docs/\">see the install docs</a>; expected href=\"/Installation_Guide/\". Also '[[ Installation Guide | text ]]' gave href=\"/text/\"."
+      },
+      {
+        "severity": "major",
+        "file": "tests/test_syntax/extensions/test_wikilinks_label.py",
+        "line": 7,
+        "problem": "The test for piped links only checks the anchor text via assertIn and never checks the href, so it passes despite the wrong URL. There are no tests for empty text, whitespace, build_url, base_url/end_url, or meta overrides.",
+        "evidence": "test_piped_link_shows_label asserts only '>see the install docs</a>' in html."
+      }
+    ],
+    "commands_run": [
+      "python -m unittest discover -s tests -t .",
+      "python -c markdown.markdown('[[Installation Guide|see the install docs]]', extensions=['wikilinks']) and variants ('|' empty text, whitespace, '[[A|b|c]]', plain, meta)"
+    ],
+    "verdict": "request_changes",
+    "route": "implementation",
+    "summary": "The approach is fine: extend the regex and handle the optional second group in the same processor. The implementation is wrong, though. build_url receives the link text, so [[Installation Guide|see the install docs]] links to /see_the_install_docs/ instead of /Installation_Guide/. The new test checks only the anchor text, so it doesn't catch this. The existing suite passes (1168 tests). Fix: build the URL from the stripped page name and use the custom text, or the page name when the text is empty, only for a.text. Add href assertions and tests for build_url, whitespace and empty text."
+  },
+  "decision": {
+    "final": "request_changes",
+    "route": "implementation",
+    "why": "2 blocker/major finding(s) with evidence"
+  },
+  "agent": {
+    "role": "reviewer",
+    "ok": true,
+    "error": "",
+    "turns": 3,
+    "seconds": 11.2,
+    "cost_usd_nominal": 0.0394,
+    "input_tokens": 26966,
+    "output_tokens": 1415,
+    "transcript": "6-review.jsonl"
+  },
+  "model": "claude-sonnet-5-5",
+  "variant": "main",
+  "head_sha": "c6d632abd10928f12e5ea399c5f6d41503665549"
+}

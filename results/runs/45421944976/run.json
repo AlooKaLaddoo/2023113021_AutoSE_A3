@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T15:08:07Z",
+  "databaseId": 45421944976,
+  "displayTitle": "Support ~~strikethrough~~ like GitHub",
+  "event": "issues",
+  "status": "completed",
+  "updatedAt": "2026-11-24T15:14:22Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45421944976",
+  "jobs": {
+    "gate": "success",
+    "build": "success",
+    "release": "success",
+    "review": "success",
+    "route": "success"
+  }
+}

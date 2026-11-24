@@ -1,0 +1,17 @@
+{
+  "conclusion": "success",
+  "createdAt": "2026-11-24T15:08:04Z",
+  "databaseId": 45421936778,
+  "displayTitle": "RecursionError on deeply nested lists takes down our server",
+  "event": "issues",
+  "status": "completed",
+  "updatedAt": "2026-11-24T15:17:26Z",
+  "url": "https://github.com/AlooKaLaddoo/markdown/actions/runs/45421936778",
+  "jobs": {
+    "gate": "success",
+    "build": "success",
+    "release": "success",
+    "review": "success",
+    "route": "success"
+  }
+}
