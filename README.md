@@ -2,6 +2,9 @@
 
 Roll number 2023113021. Report: [`report.pdf`](report.pdf) (source [`report.md`](report.md)).
 
+**Demo video (≤5 min):** <https://drive.google.com/file/d/18EfaVCexd-bmtYcN5DIWQ6AwUB8MBFv0/view?usp=drivesdk>.
+It shows one complete run, issue #5: from the issue page through both rounds to the posted review on PR #14.
+
 ## Where it runs
 
 - **Fork:** <https://github.com/AlooKaLaddoo/markdown>. It is a fork of `Python-Markdown/markdown`, pinned at upstream commit
@@ -61,6 +64,7 @@ its description, the review as a PR review), and a status comment on the issue t
 ```
 README.md                  this file
 report.pdf / report.md     the report
+(demo video)               Google Drive link at the top of this README
 architecture/
   views/                   component view, sequence view (real run), stage map
   decisions/               ADR-001 ... ADR-012 (Nygard format; superseded ones kept)
